@@ -34,9 +34,9 @@ std::error_code EngineLauncher::init() {
 
   signalHandler_ =
       std::make_unique<SignalHandler>([this]() { onTerminationRequest(); });
-  signalHandler_->install(ioService_, {SIGINT, SIGTERM});
+  signalHandler_->install(ioContext_, {SIGINT, SIGTERM});
 
-  engine_ = std::make_unique<Engine>(ioService_, *this);
+  engine_ = std::make_unique<Engine>(ioContext_, *this, appConfig_);
 
   auto const initiated = engine_->init();
   return initiated ? GeneralError::Success : GeneralError::StartupFailed;
@@ -49,8 +49,14 @@ std::error_code EngineLauncher::doRun() {
   engine_->start();
 
   SPDLOG_INFO("Waiting for termination request");
-  ioService_.run();
-  SPDLOG_DEBUG("Main execution loop is done");
+
+  boost::system::error_code errorCode;
+  ioContext_.run(errorCode);
+  if (errorCode) {
+    SPDLOG_DEBUG("Main execution loop is done with error: {}",
+                 errorCode.message());
+    return GeneralError::InternalError;
+  }
 
   return GeneralError::Success;
 }

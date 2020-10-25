@@ -10,7 +10,7 @@
 #include <jwlrep/IEngineEventHandler.h>
 #include <jwlrep/SignalHandler.h>
 
-#include <boost/asio/io_service.hpp>
+#include <boost/asio/io_context.hpp>
 
 #include <memory>
 
@@ -60,7 +60,7 @@ class EngineLauncher final : public IEngineEventHandler {
 
   std::unique_ptr<Engine> engine_;
 
-  boost::asio::io_service ioService_;
+  boost::asio::io_context ioContext_;
 };
 
 } // namespace jwlrep

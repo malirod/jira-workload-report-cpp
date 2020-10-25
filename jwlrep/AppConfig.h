@@ -7,26 +7,27 @@
 #include <jwlrep/Outcome.h>
 
 #include <string>
-#include <system_error>
 #include <vector>
 
 namespace jwlrep {
 
 struct Credentials {
-  std::string server;
-  std::string userName;
-  std::string password;
+  std::string const server;
+  std::string const userName;
+  std::string const password;
 };
 
 struct Options {
-  std::int64_t weekNum;
-  std::vector<std::string> users;
+  std::int8_t const weekNum;
+  std::vector<std::string> const users;
 };
 
 struct AppConfig {
-  Credentials credentials;
-  Options options;
+  Credentials const credentials;
+  Options const options;
 };
+
+Expected<AppConfig> createAppConfig(std::string const& configFileText);
 
 Expected<AppConfig> processCmdArgs(int argc, char** argv);
 

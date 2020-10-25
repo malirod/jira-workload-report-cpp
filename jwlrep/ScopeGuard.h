@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <functional>
 #include <utility>
 
 namespace jwlrep {
@@ -12,15 +11,15 @@ namespace jwlrep {
 /**
  * Class uses RAII idiom for automatic cleanup.
  */
+template <typename Fn>
 class ScopeGuard {
  public:
-  using CleanupAction = std::function<void()>;
   /**
    * Create guard object.
    * @param cleanupAction action to be performed when going out of scope.
    */
-  explicit ScopeGuard(CleanupAction cleanupAction)
-      : cleanupAction_(std::move(cleanupAction)) {
+  explicit ScopeGuard(Fn&& cleanupAction)
+      : cleanupAction_(std::forward<Fn>(cleanupAction)) {
   }
 
   /**
@@ -31,7 +30,7 @@ class ScopeGuard {
   }
 
  private:
-  CleanupAction const cleanupAction_;
+  Fn cleanupAction_;
 };
 
 } // namespace jwlrep

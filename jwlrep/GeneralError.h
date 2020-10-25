@@ -16,6 +16,7 @@ enum class GeneralError {
   Success,
   InternalError,
   WrongStartupParams,
+  InvalidAppConfig,
   StartupFailed,
   Interrupted
 };

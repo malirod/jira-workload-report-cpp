@@ -6,17 +6,20 @@
 
 #include <jwlrep/IEngineEventHandler.h>
 
-#include <boost/asio/io_service.hpp>
+#include <boost/asio/io_context.hpp>
 
 namespace jwlrep {
+
+struct AppConfig;
 
 /**
  * Implementation of Engine. Runs all business logic.
  */
 class Engine final {
  public:
-  explicit Engine(boost::asio::io_service& io_service,
-                  IEngineEventHandler& engineEventHandler);
+  explicit Engine(boost::asio::io_context& ioContext,
+                  IEngineEventHandler& engineEventHandler,
+                  AppConfig const& appConfig);
 
   Engine& operator=(Engine const&) = delete;
   Engine(Engine const&) = delete;
@@ -45,11 +48,15 @@ class Engine final {
   bool init();
 
  private:
+  std::vector<std::string> queryTimesheets();
+
   bool initiated_ = false;
 
-  boost::asio::io_service& ioService_;
+  boost::asio::io_context& ioContext_;
 
   IEngineEventHandler& engineEventHandler_;
+
+  AppConfig const& appConfig_;
 };
 
 } // namespace jwlrep

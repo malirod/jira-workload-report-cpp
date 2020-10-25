@@ -8,6 +8,7 @@
 #include <jwlrep/PathUtil.h>
 #include <jwlrep/Version.h>
 
+#include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
 
 #include <boost/optional.hpp>
@@ -15,31 +16,93 @@
 
 #include <fstream>
 
-namespace jwlrep {
-
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(jwlrep::Credentials,
-                                   server,
-                                   userName,
-                                   password)
-
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(jwlrep::Options, weekNum, users)
-
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(jwlrep::AppConfig, credentials, options)
-
-} // namespace jwlrep
-
 namespace {
 
-jwlrep::AppConfig createAppConfig(std::ifstream& configFileStream) {
-  assert(configFileStream);
-  nlohmann::json configFileJson;
-  configFileStream >> configFileJson;
+bool isJsonAppConfigValid(nlohmann::json const& jsonAppConfig) {
+  auto const jsonSchema = R"(
+  {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Application Config",
+    "properties": {
+        "credentials": {
+            "description": "Credentials to the Jira server",
+            "type": "object",
+            "properties": {"server": {"type": "string"},
+                           "userName": {"type": "string"},
+                           "userName": {"password": "string"}
+                          },
+            "required": [
+                 "server",
+                 "userName",
+                 "password"
+                 ]
+        },
+        "options": {
+            "description": "Report params",
+            "type": "object",
+            "properties": {"weekNum": {"type": "integer", "minimum": 1,
+"maximum": 53}, "users": {"type": "array", "items": {"type": "string"}}
+                          },
+            "required": [
+                 "weekNum",
+                 "users"
+                 ]
+        }
+    },
+    "required": [
+                 "credentials",
+                 "options"
+                 ],
+    "type": "object"
+  }
+  )"_json;
 
-  return configFileJson.get<jwlrep::AppConfig>();
+  try {
+    static nlohmann::json_schema::json_validator const validator(
+        jsonSchema,
+        nullptr,
+        nlohmann::json_schema::default_string_format_check);
+    validator.validate(jsonAppConfig);
+  } catch (std::exception const& e) {
+    SPDLOG_ERROR("App config validation has failed: {}", e.what());
+    return false;
+  }
+  return true;
 }
 
 } // namespace
+
 namespace jwlrep {
+
+Expected<AppConfig> createAppConfig(std::string const& configFileText) {
+  auto const configFileJson =
+      nlohmann::json::parse(configFileText, nullptr, false, true);
+
+  if (configFileJson.is_discarded()) {
+    SPDLOG_ERROR("Failed to parse app config: json is not valid");
+    return make_error_code(GeneralError::InvalidAppConfig);
+  }
+
+  if (!isJsonAppConfigValid(configFileJson)) {
+    return make_error_code(GeneralError::InvalidAppConfig);
+  }
+
+  auto const server =
+      configFileJson["credentials"]["server"].get<std::string>();
+
+  auto credentials = Credentials{
+      .server = configFileJson["credentials"]["server"].get<std::string>(),
+      .userName = configFileJson["credentials"]["userName"].get<std::string>(),
+      .password = configFileJson["credentials"]["password"].get<std::string>()};
+
+  auto options = Options{
+      .weekNum = configFileJson["options"]["weekNum"].get<std::int8_t>(),
+      .users =
+          configFileJson["options"]["users"].get<std::vector<std::string>>()};
+
+  return jwlrep::AppConfig{.credentials = std::move(credentials),
+                           .options = std::move(options)};
+}
 
 Expected<AppConfig> processCmdArgs(int argc, char** argv) {
   namespace po = boost::program_options;
@@ -94,7 +157,9 @@ Expected<AppConfig> processCmdArgs(int argc, char** argv) {
       SPDLOG_ERROR("Cannot open app configuration file: {}", configFilePath);
       return GeneralError::Interrupted;
     }
-    return createAppConfig(configFileStream);
+    auto const configFileText =
+        std::string{std::istreambuf_iterator{configFileStream}, {}};
+    return createAppConfig(configFileText);
   } catch (std::exception const& error) {
     printError(error);
     printHelp(generalOptions);

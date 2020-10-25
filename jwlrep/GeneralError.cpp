@@ -12,6 +12,7 @@ EnumStrings<GeneralError>::DataType EnumStrings<GeneralError>::data = {
     "Success",
     "Internal error",
     "Wrong startup parameter(s)",
+    "Invalid AppConfig",
     "Startup has failed",
     "Operation interrupted"};
 
