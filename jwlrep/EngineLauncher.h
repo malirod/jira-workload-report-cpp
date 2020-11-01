@@ -60,7 +60,7 @@ class EngineLauncher final : public IEngineEventHandler {
 
   std::unique_ptr<Engine> engine_;
 
-  boost::asio::io_context ioContext_;
+  std::shared_ptr<boost::asio::io_context> ioContext_;
 };
 
 } // namespace jwlrep

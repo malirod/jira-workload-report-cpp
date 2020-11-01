@@ -7,7 +7,10 @@ cmake_minimum_required(VERSION 3.18)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
 include(DefaultDebug)
 
-project(jwlrep VERSION 1.0 LANGUAGES CXX)
+project(
+  jwlrep
+  VERSION 1.0
+  LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -15,40 +18,41 @@ include(CTest)
 
 if(WIN32)
   # Set global warnings configuration for all sub-projects
-  #add_compile_options(-W4 -WX)
+  # add_compile_options(-W4 -WX)
   add_compile_options(-W4)
 
   # Prevent Boost compleins about Win Version
   macro(get_WIN32_WINNT version)
-        if(CMAKE_SYSTEM_VERSION)
-            set(ver ${CMAKE_SYSTEM_VERSION})
-            string(REGEX MATCH "^([0-9]+).([0-9])" ver ${ver})
-            string(REGEX MATCH "^([0-9]+)" verMajor ${ver})
-            # Check for Windows 10, b/c we'll need to convert to hex 'A'.
-            if("${verMajor}" MATCHES "10")
-                set(verMajor "A")
-                string(REGEX REPLACE "^([0-9]+)" ${verMajor} ver ${ver})
-            endif()
-            # Remove all remaining '.' characters.
-            string(REPLACE "." "" ver ${ver})
-            # Prepend each digit with a zero.
-            string(REGEX REPLACE "([0-9A-Z])" "0\\1" ver ${ver})
-            set(${version} "0x${ver}")
-        endif()
-    endmacro()
+    if(CMAKE_SYSTEM_VERSION)
+      set(ver ${CMAKE_SYSTEM_VERSION})
+      string(REGEX MATCH "^([0-9]+).([0-9])" ver ${ver})
+      string(REGEX MATCH "^([0-9]+)" verMajor ${ver})
+      # Check for Windows 10, b/c we'll need to convert to hex 'A'.
+      if("${verMajor}" MATCHES "10")
+        set(verMajor "A")
+        string(REGEX REPLACE "^([0-9]+)" ${verMajor} ver ${ver})
+      endif()
+      # Remove all remaining '.' characters.
+      string(REPLACE "." "" ver ${ver})
+      # Prepend each digit with a zero.
+      string(REGEX REPLACE "([0-9A-Z])" "0\\1" ver ${ver})
+      set(${version} "0x${ver}")
+    endif()
+  endmacro()
 
-    get_WIN32_WINNT(ver)
-    add_definitions(-D_WIN32_WINNT=${ver})
+  get_win32_winnt(ver)
+  add_definitions(-D_WIN32_WINNT=${ver})
 endif()
 
 # Dependencies
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
-find_package(Boost 1.73 REQUIRED COMPONENTS program_options)
+find_package(Boost 1.73 REQUIRED COMPONENTS program_options context fiber)
 find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(nlohmann_json_schema_validator REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # Project lib configuration
 set(LIB_NAME jwlreplib)
@@ -73,84 +77,104 @@ set(LIB_SRC_LIST
     "jwlrep/Outcome.h"
     "jwlrep/Logger.h"
     "jwlrep/Logger.cpp"
-    #"jwlrep/NetUtil.h"
-    #"jwlrep/NetUtil.cpp"
+    "jwlrep/Base64.h"
+    "jwlrep/Base64.cpp"
+    "jwlrep/RootCertificates.h"
+    # "jwlrep/NetUtil.h" "jwlrep/NetUtil.cpp"
 )
 
 add_library(${LIB_NAME} ${LIB_SRC_LIST})
 add_library(jwlrep::${LIB_NAME} ALIAS ${LIB_NAME})
 
 # Set static linking (the value is ignored on non-MSVC compilers)
-set_property(TARGET ${LIB_NAME} PROPERTY
-             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set_property(
+  TARGET ${LIB_NAME} PROPERTY MSVC_RUNTIME_LIBRARY
+                              "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 # make possible to include headers using "<project/file>" notation
-target_include_directories(${LIB_NAME}
-  BEFORE
-  PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-)
+target_include_directories(
+  ${LIB_NAME} BEFORE PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
-target_compile_features(${LIB_NAME} PRIVATE cxx_std_20)
-target_include_directories(${LIB_NAME} PUBLIC ${Boost_INCLUDE_DIRS})
-target_link_libraries(${LIB_NAME}
-  PUBLIC
-  fmt::fmt
-  ${Boost_LIBRARIES}
-  spdlog::spdlog
-  nlohmann_json::nlohmann_json
-  nlohmann_json_schema_validator
-)
+# target_compile_features(${LIB_NAME} PRIVATE cxx_std_20)
+target_compile_features(${LIB_NAME} PRIVATE cxx_std_17)
+target_include_directories(${LIB_NAME} PRIVATE ${Boost_INCLUDE_DIRS})
+# make boost fiber asio placed in the project root available
+target_include_directories(${LIB_NAME} PRIVATE "boost")
+
+target_link_libraries(
+  ${LIB_NAME}
+  PRIVATE fmt::fmt
+          ${Boost_LIBRARIES}
+          nlohmann_json::nlohmann_json
+          nlohmann_json_schema_validator
+          Boost::context
+          OpenSSL::SSL
+          OpenSSL::Crypto)
+
+if(MSVC)
+  target_link_libraries(${LIB_NAME} INTERFACE Crypt32.lib)
+endif()
+
+target_link_libraries(${LIB_NAME} PUBLIC spdlog::spdlog)
 
 # App configuration
 set(APP_NAME jwlrep)
 add_executable(${APP_NAME} "jwlrep/LifeCycle.cpp")
-target_compile_features(${APP_NAME} PRIVATE cxx_std_20)
+# target_compile_features(${APP_NAME} PRIVATE cxx_std_20)
+target_compile_features(${APP_NAME} PRIVATE cxx_std_17)
+target_include_directories(${APP_NAME} PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(${APP_NAME} PRIVATE jwlrep::${LIB_NAME})
 
 # Set static linking (the value is ignored on non-MSVC compilers)
-set_property(TARGET ${APP_NAME} PROPERTY
-             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set_property(
+  TARGET ${APP_NAME} PROPERTY MSVC_RUNTIME_LIBRARY
+                              "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-if (NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.cfg)
+if(NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_PROJECT_NAME}.cfg)
   message(STATUS "Copy app config to bin output dir")
-  configure_file(config/${CMAKE_PROJECT_NAME}.cfg ${CMAKE_PROJECT_NAME}.cfg COPYONLY)
+  configure_file(config/${CMAKE_PROJECT_NAME}.cfg ${CMAKE_PROJECT_NAME}.cfg
+                 COPYONLY)
 else()
   message(STATUS "Skip copy app config to bin output dir. Already exists.")
 endif()
 
-if (BUILD_TESTING)
-    find_package(Catch2 REQUIRED)
+if(BUILD_TESTING)
+  find_package(Catch2 REQUIRED)
 
-    set(TEST_LIB_NAME "${LIB_NAME}_test")
+  set(TEST_LIB_NAME "${LIB_NAME}_test")
 
-    set(TEST_SRC_LIST
-        "jwlrep/test/AppConfigTest.cpp"
-        "jwlrep/test/EnumUtilTest.cpp"
-        "jwlrep/test/GeneralErrorTest.cpp"
-    )
+  set(TEST_SRC_LIST
+      "jwlrep/test/AppConfigTest.cpp" "jwlrep/test/EnumUtilTest.cpp"
+      "jwlrep/test/GeneralErrorTest.cpp" "jwlrep/test/Base64Test.cpp")
 
-    add_library(${TEST_LIB_NAME} OBJECT ${TEST_SRC_LIST})
-    add_library(jwlrep::${TEST_LIB_NAME} ALIAS ${TEST_LIB_NAME})
+  add_library(${TEST_LIB_NAME} OBJECT ${TEST_SRC_LIST})
+  add_library(jwlrep::${TEST_LIB_NAME} ALIAS ${TEST_LIB_NAME})
 
-    target_include_directories(${TEST_LIB_NAME} PRIVATE test)
-    target_compile_features(${APP_NAME} PRIVATE cxx_std_20)
-    target_link_libraries(${TEST_LIB_NAME} PUBLIC jwlrep::${LIB_NAME} Catch2::Catch2)
+  target_include_directories(${TEST_LIB_NAME} PRIVATE test)
+  target_include_directories(${TEST_LIB_NAME} PRIVATE ${Boost_INCLUDE_DIRS})
 
-    # Set static linking (the value is ignored on non-MSVC compilers)
-    set_property(TARGET ${TEST_LIB_NAME} PROPERTY
-                 MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  # target_compile_features(${TEST_LIB_NAME} PRIVATE cxx_std_20)
+  target_compile_features(${TEST_LIB_NAME} PRIVATE cxx_std_17)
+  target_link_libraries(${TEST_LIB_NAME} PUBLIC jwlrep::${LIB_NAME}
+                                                Catch2::Catch2)
 
-    set(TEST_RUNNER_NAME testrunner)
+  # Set static linking (the value is ignored on non-MSVC compilers)
+  set_property(
+    TARGET ${TEST_LIB_NAME} PROPERTY MSVC_RUNTIME_LIBRARY
+                                     "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-    add_executable(${TEST_RUNNER_NAME} "jwlrep/test/TestRunner.cpp")
+  set(TEST_RUNNER_NAME testrunner)
 
-    target_compile_features(${TEST_RUNNER_NAME} PRIVATE cxx_std_20)
-    target_link_libraries(${TEST_RUNNER_NAME} PRIVATE ${TEST_LIB_NAME})
+  add_executable(${TEST_RUNNER_NAME} "jwlrep/test/TestRunner.cpp")
 
-    # Set static linking (the value is ignored on non-MSVC compilers)
-    set_property(TARGET ${TEST_RUNNER_NAME} PROPERTY
-                 MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+  # target_compile_features(${TEST_RUNNER_NAME} PRIVATE cxx_std_20)
+  target_compile_features(${TEST_RUNNER_NAME} PRIVATE cxx_std_17)
+  target_link_libraries(${TEST_RUNNER_NAME} PRIVATE ${TEST_LIB_NAME})
 
-    add_test(NAME all COMMAND ${TEST_RUNNER_NAME})
+  # Set static linking (the value is ignored on non-MSVC compilers)
+  set_property(
+    TARGET ${TEST_RUNNER_NAME} PROPERTY MSVC_RUNTIME_LIBRARY
+                                        "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
+  add_test(NAME all COMMAND ${TEST_RUNNER_NAME})
 endif()

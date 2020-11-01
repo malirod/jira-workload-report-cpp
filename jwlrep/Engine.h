@@ -7,6 +7,8 @@
 #include <jwlrep/IEngineEventHandler.h>
 
 #include <boost/asio/io_context.hpp>
+#include <boost/beast/ssl.hpp>
+#include <boost/fiber/buffered_channel.hpp>
 
 namespace jwlrep {
 
@@ -17,7 +19,7 @@ struct AppConfig;
  */
 class Engine final {
  public:
-  explicit Engine(boost::asio::io_context& ioContext,
+  explicit Engine(std::shared_ptr<boost::asio::io_context> ioContext,
                   IEngineEventHandler& engineEventHandler,
                   AppConfig const& appConfig);
 
@@ -48,15 +50,19 @@ class Engine final {
   bool init();
 
  private:
-  std::vector<std::string> queryTimesheets();
+  void queryTimesheets();
 
   bool initiated_ = false;
 
-  boost::asio::io_context& ioContext_;
+  std::shared_ptr<boost::asio::io_context> ioContext_;
+
+  std::unique_ptr<boost::asio::ssl::context> sslContext_;
 
   IEngineEventHandler& engineEventHandler_;
 
   AppConfig const& appConfig_;
+
+  std::unique_ptr<boost::fibers::buffered_channel<int>> channel_;
 };
 
 } // namespace jwlrep

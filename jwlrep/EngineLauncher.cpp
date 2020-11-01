@@ -32,9 +32,11 @@ void EngineLauncher::onEngineStopped() {
 std::error_code EngineLauncher::init() {
   SPDLOG_INFO("Jira: {}", appConfig_.credentials.server);
 
+  ioContext_ = std::make_shared<boost::asio::io_service>();
+
   signalHandler_ =
       std::make_unique<SignalHandler>([this]() { onTerminationRequest(); });
-  signalHandler_->install(ioContext_, {SIGINT, SIGTERM});
+  signalHandler_->install(*ioContext_, {SIGINT, SIGTERM});
 
   engine_ = std::make_unique<Engine>(ioContext_, *this, appConfig_);
 
@@ -51,7 +53,7 @@ std::error_code EngineLauncher::doRun() {
   SPDLOG_INFO("Waiting for termination request");
 
   boost::system::error_code errorCode;
-  ioContext_.run(errorCode);
+  ioContext_->run(errorCode);
   if (errorCode) {
     SPDLOG_DEBUG("Main execution loop is done with error: {}",
                  errorCode.message());

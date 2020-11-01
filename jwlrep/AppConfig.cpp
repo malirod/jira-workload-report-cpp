@@ -90,18 +90,16 @@ Expected<AppConfig> createAppConfig(std::string const& configFileText) {
   auto const server =
       configFileJson["credentials"]["server"].get<std::string>();
 
-  auto credentials = Credentials{
-      .server = configFileJson["credentials"]["server"].get<std::string>(),
-      .userName = configFileJson["credentials"]["userName"].get<std::string>(),
-      .password = configFileJson["credentials"]["password"].get<std::string>()};
+  auto credentials =
+      Credentials{configFileJson["credentials"]["server"].get<std::string>(),
+                  configFileJson["credentials"]["userName"].get<std::string>(),
+                  configFileJson["credentials"]["password"].get<std::string>()};
 
   auto options = Options{
-      .weekNum = configFileJson["options"]["weekNum"].get<std::int8_t>(),
-      .users =
-          configFileJson["options"]["users"].get<std::vector<std::string>>()};
+      configFileJson["options"]["weekNum"].get<std::int8_t>(),
+      configFileJson["options"]["users"].get<std::vector<std::string>>()};
 
-  return jwlrep::AppConfig{.credentials = std::move(credentials),
-                           .options = std::move(options)};
+  return jwlrep::AppConfig{std::move(credentials), std::move(options)};
 }
 
 Expected<AppConfig> processCmdArgs(int argc, char** argv) {

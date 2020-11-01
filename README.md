@@ -4,7 +4,7 @@ Gets worklog report from Jira and calculated workload.
 
 ## Platform
 
-Windows 10, Visual Studio 2019, CMake 3.18, Ninja
+Windows 10, Visual Studio 2019, CMake 3.18.4, Ninja
 
 ## Dependencies
 
