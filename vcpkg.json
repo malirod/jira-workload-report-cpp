@@ -1,0 +1,15 @@
+{
+    "name": "jwlrep",
+    "version-string": "1.0.0",
+    "homepage": "https://github.com/malirod/jira-workload-report-cpp",
+    "description": "Gets worklog report from Jira and generates excel report with workload.",
+    "dependencies": [
+        "boost",
+        "spdlog",
+        "fmt",
+        "nlohmann-json",
+        "json-schema-validator",
+        "xlnt",
+        "catch2"
+    ]
+}

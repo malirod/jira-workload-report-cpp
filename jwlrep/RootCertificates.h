@@ -11,7 +11,7 @@
 namespace detail {
 
 inline void loadRootCertificates(boost::asio::ssl::context& ctx,
-                                 boost::system::error_code& ec) {
+                                 boost::system::error_code& errorCode) {
   std::string const cert =
       /*  This is the DigiCert Global Root CA
 
@@ -88,8 +88,8 @@ inline void loadRootCertificates(boost::asio::ssl::context& ctx,
   ;
 
   ctx.add_certificate_authority(boost::asio::buffer(cert.data(), cert.size()),
-                                ec);
-  if (ec)
+                                errorCode);
+  if (errorCode)
     return;
 }
 

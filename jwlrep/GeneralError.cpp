@@ -14,7 +14,8 @@ EnumStrings<GeneralError>::DataType EnumStrings<GeneralError>::data = {
     "Wrong startup parameter(s)",
     "Invalid AppConfig",
     "Startup has failed",
-    "Operation interrupted"};
+    "Operation interrupted",
+    "System error"};
 
 const std::error_category& detail::ErrorCategory::get() {
   static ErrorCategory instance;

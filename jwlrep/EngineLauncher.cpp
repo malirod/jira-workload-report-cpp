@@ -30,7 +30,7 @@ void EngineLauncher::onEngineStopped() {
 }
 
 std::error_code EngineLauncher::init() {
-  SPDLOG_INFO("Jira: {}", appConfig_.credentials.server);
+  SPDLOG_INFO("Jira: {}", appConfig_.credentials().server());
 
   ioContext_ = std::make_shared<boost::asio::io_service>();
 

@@ -6,13 +6,13 @@
 
 #include <jwlrep/IEngineEventHandler.h>
 
+#include <jwlrep/AppConfig.h>
+
 #include <boost/asio/io_context.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/fiber/buffered_channel.hpp>
 
 namespace jwlrep {
-
-struct AppConfig;
 
 /**
  * Implementation of Engine. Runs all business logic.

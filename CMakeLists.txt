@@ -5,12 +5,8 @@
 cmake_minimum_required(VERSION 3.18)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
-include(DefaultDebug)
 
-project(
-  jwlrep
-  VERSION 1.0
-  LANGUAGES CXX)
+project(jwlrep LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -47,7 +43,7 @@ endif()
 # Dependencies
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
-find_package(Boost 1.73 REQUIRED COMPONENTS program_options context fiber)
+find_package(Boost REQUIRED COMPONENTS program_options context fiber)
 find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -80,8 +76,14 @@ set(LIB_SRC_LIST
     "jwlrep/Base64.h"
     "jwlrep/Base64.cpp"
     "jwlrep/RootCertificates.h"
-    # "jwlrep/NetUtil.h" "jwlrep/NetUtil.cpp"
-)
+    "jwlrep/NetUtil.h"
+    "jwlrep/NetUtil.cpp"
+    "jwlrep/ErrorCodeUtil.h"
+    "jwlrep/ErrorCodeUtil.cpp"
+    "jwlrep/Worklog.h"
+    "jwlrep/Worklog.cpp"
+    "jwlrep/DateTimeUtil.h"
+    "jwlrep/DateTimeUtil.cpp")
 
 add_library(${LIB_NAME} ${LIB_SRC_LIST})
 add_library(jwlrep::${LIB_NAME} ALIAS ${LIB_NAME})
@@ -145,7 +147,8 @@ if(BUILD_TESTING)
 
   set(TEST_SRC_LIST
       "jwlrep/test/AppConfigTest.cpp" "jwlrep/test/EnumUtilTest.cpp"
-      "jwlrep/test/GeneralErrorTest.cpp" "jwlrep/test/Base64Test.cpp")
+      "jwlrep/test/GeneralErrorTest.cpp" "jwlrep/test/Base64Test.cpp"
+      "jwlrep/test/ErrorCodeUtilTest.cpp" "jwlrep/test/WorklogTest.cpp")
 
   add_library(${TEST_LIB_NAME} OBJECT ${TEST_SRC_LIST})
   add_library(jwlrep::${TEST_LIB_NAME} ALIAS ${TEST_LIB_NAME})
@@ -177,4 +180,7 @@ if(BUILD_TESTING)
                                         "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
   add_test(NAME all COMMAND ${TEST_RUNNER_NAME})
+
+  include(Catch)
+  catch_discover_tests(${TEST_RUNNER_NAME})
 endif()

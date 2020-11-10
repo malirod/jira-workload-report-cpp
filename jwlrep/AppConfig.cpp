@@ -16,16 +16,48 @@
 
 #include <fstream>
 
+namespace nlohmann {
+template <>
+struct adl_serializer<jwlrep::Credentials> {
+  static jwlrep::Credentials from_json(json const& json) {
+    return jwlrep::Credentials{json["server"].get<std::string>(),
+                               json["userName"].get<std::string>(),
+                               json["password"].get<std::string>()};
+    ;
+  }
+};
+
+template <>
+struct adl_serializer<jwlrep::Options> {
+  static jwlrep::Options from_json(json const& json) {
+    return jwlrep::Options{
+        boost::gregorian::from_string(json["dateStart"].get<std::string>()),
+        boost::gregorian::from_string(json["dateEnd"].get<std::string>()),
+        json["users"].get<std::vector<std::string>>()};
+    ;
+  }
+};
+
+template <>
+struct adl_serializer<jwlrep::AppConfig> {
+  static jwlrep::AppConfig from_json(json const& json) {
+    return jwlrep::AppConfig{json["credentials"].get<jwlrep::Credentials>(),
+                             json["options"].get<jwlrep::Options>()};
+    ;
+  }
+};
+
+} // namespace nlohmann
+
 namespace {
 
-bool isJsonAppConfigValid(nlohmann::json const& jsonAppConfig) {
+bool isJsonValid(nlohmann::json const& jsonAppConfigJson) {
   auto const jsonSchema = R"(
   {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "Application Config",
+    "type": "object",
     "properties": {
         "credentials": {
-            "description": "Credentials to the Jira server",
             "type": "object",
             "properties": {"server": {"type": "string"},
                            "userName": {"type": "string"},
@@ -38,13 +70,14 @@ bool isJsonAppConfigValid(nlohmann::json const& jsonAppConfig) {
                  ]
         },
         "options": {
-            "description": "Report params",
             "type": "object",
-            "properties": {"weekNum": {"type": "integer", "minimum": 1,
-"maximum": 53}, "users": {"type": "array", "items": {"type": "string"}}
+            "properties": {"dateStart": {"type": "string", "format": "date"},
+                           "dateEnd": {"type": "string", "format": "date"},
+                           "users": {"type": "array", "items": {"type": "string"}}
                           },
             "required": [
-                 "weekNum",
+                 "dateStart",
+                 "dateEnd",
                  "users"
                  ]
         }
@@ -52,8 +85,7 @@ bool isJsonAppConfigValid(nlohmann::json const& jsonAppConfig) {
     "required": [
                  "credentials",
                  "options"
-                 ],
-    "type": "object"
+                 ]
   }
   )"_json;
 
@@ -62,7 +94,9 @@ bool isJsonAppConfigValid(nlohmann::json const& jsonAppConfig) {
         jsonSchema,
         nullptr,
         nlohmann::json_schema::default_string_format_check);
-    validator.validate(jsonAppConfig);
+    // TODO: Extract error handler which will not use exceptions. Make util
+    // class.
+    validator.validate(jsonAppConfigJson);
   } catch (std::exception const& e) {
     SPDLOG_ERROR("App config validation has failed: {}", e.what());
     return false;
@@ -74,32 +108,21 @@ bool isJsonAppConfigValid(nlohmann::json const& jsonAppConfig) {
 
 namespace jwlrep {
 
-Expected<AppConfig> createAppConfig(std::string const& configFileText) {
+Expected<AppConfig> createAppConfigFromJson(
+    std::string const& configFileJsonStr) {
   auto const configFileJson =
-      nlohmann::json::parse(configFileText, nullptr, false, true);
+      nlohmann::json::parse(configFileJsonStr, nullptr, false, true);
 
   if (configFileJson.is_discarded()) {
     SPDLOG_ERROR("Failed to parse app config: json is not valid");
     return make_error_code(GeneralError::InvalidAppConfig);
   }
 
-  if (!isJsonAppConfigValid(configFileJson)) {
+  if (!isJsonValid(configFileJson)) {
     return make_error_code(GeneralError::InvalidAppConfig);
   }
 
-  auto const server =
-      configFileJson["credentials"]["server"].get<std::string>();
-
-  auto credentials =
-      Credentials{configFileJson["credentials"]["server"].get<std::string>(),
-                  configFileJson["credentials"]["userName"].get<std::string>(),
-                  configFileJson["credentials"]["password"].get<std::string>()};
-
-  auto options = Options{
-      configFileJson["options"]["weekNum"].get<std::int8_t>(),
-      configFileJson["options"]["users"].get<std::vector<std::string>>()};
-
-  return jwlrep::AppConfig{std::move(credentials), std::move(options)};
+  return configFileJson.get<AppConfig>();
 }
 
 Expected<AppConfig> processCmdArgs(int argc, char** argv) {
@@ -157,12 +180,60 @@ Expected<AppConfig> processCmdArgs(int argc, char** argv) {
     }
     auto const configFileText =
         std::string{std::istreambuf_iterator{configFileStream}, {}};
-    return createAppConfig(configFileText);
+    return createAppConfigFromJson(configFileText);
   } catch (std::exception const& error) {
     printError(error);
     printHelp(generalOptions);
     return GeneralError::WrongStartupParams;
   }
+}
+
+Credentials::Credentials(std::string const& server,
+                         std::string const& userName,
+                         std::string const& password)
+    : server_(server), userName_(userName), password_(password) {
+}
+
+std::string const& Credentials::server() const {
+  return server_;
+}
+
+std::string const& Credentials::userName() const {
+  return userName_;
+}
+
+std::string const& Credentials::password() const {
+  return password_;
+}
+
+Options::Options(boost::gregorian::date dateStart,
+                 boost::gregorian::date dateEnd,
+                 std::vector<std::string>&& users)
+    : dateStart_(dateStart), dateEnd_(dateEnd), users_(std::move(users)) {
+}
+
+boost::gregorian::date const& Options::dateStart() const {
+  return dateStart_;
+}
+
+boost::gregorian::date const& Options::dateEnd() const {
+  return dateEnd_;
+}
+
+std::vector<std::string> const& Options::users() const {
+  return users_;
+}
+
+AppConfig::AppConfig(Credentials&& credentials, Options&& options)
+    : credentials_(credentials), options_(options) {
+}
+
+Credentials const& AppConfig::credentials() const {
+  return credentials_;
+}
+
+Options const& AppConfig::options() const {
+  return options_;
 }
 
 } // namespace jwlrep

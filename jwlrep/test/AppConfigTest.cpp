@@ -16,14 +16,21 @@ TEST_CASE("Valid config", "[AppConfig]") {
         "password":"PASSWORD"
       },
       "options": {
-        "weekNum": 41,
+        "dateStart": "2020-11-21",
+        "dateEnd": "2020-12-23",
         "users": ["User1", "User2"]
       }
     }
   )";
-  auto const appConfigOrError = jwlrep::createAppConfig(config);
+  auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
   REQUIRE(appConfigOrError.has_value());
-  REQUIRE(appConfigOrError.value().credentials.server == "my.server.com");
+  REQUIRE(appConfigOrError.value().credentials().server() == "my.server.com");
+  REQUIRE(appConfigOrError.value().options().dateStart().year() == 2020);
+  REQUIRE(appConfigOrError.value().options().dateStart().month() == 11);
+  REQUIRE(appConfigOrError.value().options().dateStart().day() == 21);
+  REQUIRE(appConfigOrError.value().options().dateEnd().year() == 2020);
+  REQUIRE(appConfigOrError.value().options().dateEnd().month() == 12);
+  REQUIRE(appConfigOrError.value().options().dateEnd().day() == 23);
 }
 
 TEST_CASE("Invalid config. Bad Json.", "[AppConfig]") {
@@ -34,12 +41,13 @@ TEST_CASE("Invalid config. Bad Json.", "[AppConfig]") {
         "password":"PASSWORD"
       },
       "options": {
-        "weekNum": 41,
+        "dateStart": "2020-11-21",
+        "dateEnd": "2020-11-23",
         "users": ["User1", "User2"]
       }
     }
   )";
-  auto const appConfigOrError = jwlrep::createAppConfig(config);
+  auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
   REQUIRE(appConfigOrError.has_error());
   REQUIRE(appConfigOrError.error() == jwlrep::GeneralError::InvalidAppConfig);
 }
@@ -52,12 +60,13 @@ TEST_CASE("Invalid config. Missing server.", "[AppConfig]") {
         "password":"PASSWORD"
       },
       "options": {
-        "weekNum": 41,
+        "dateStart": "2020-11-21",
+        "dateEnd": "2020-11-23",
         "users": ["User1", "User2"]
       }
     }
   )";
-  auto const appConfigOrError = jwlrep::createAppConfig(config);
+  auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
   REQUIRE(appConfigOrError.has_error());
   REQUIRE(appConfigOrError.error() == jwlrep::GeneralError::InvalidAppConfig);
 }
@@ -70,12 +79,13 @@ TEST_CASE("Invalid config. Missing userName.", "[AppConfig]") {
         "password":"PASSWORD"
       },
       "options": {
-        "weekNum": 41,
+        "dateStart": "2020-11-21",
+        "dateEnd": "2020-11-23",
         "users": ["User1", "User2"]
       }
     }
   )";
-  auto const appConfigOrError = jwlrep::createAppConfig(config);
+  auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
   REQUIRE(appConfigOrError.has_error());
   REQUIRE(appConfigOrError.error() == jwlrep::GeneralError::InvalidAppConfig);
 }
@@ -88,17 +98,18 @@ TEST_CASE("Invalid config. Missing password.", "[AppConfig]") {
         "userName":"LOGIN"
       },
       "options": {
-        "weekNum": 41,
+        "dateStart": "2020-11-21",
+        "dateEnd": "2020-11-23",
         "users": ["User1", "User2"]
       }
     }
   )";
-  auto const appConfigOrError = jwlrep::createAppConfig(config);
+  auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
   REQUIRE(appConfigOrError.has_error());
   REQUIRE(appConfigOrError.error() == jwlrep::GeneralError::InvalidAppConfig);
 }
 
-TEST_CASE("Invalid config. Missing weekNum.", "[AppConfig]") {
+TEST_CASE("Invalid config. Missing dateStart.", "[AppConfig]") {
   auto const config = R"(
     {
       "credentials": {
@@ -107,11 +118,31 @@ TEST_CASE("Invalid config. Missing weekNum.", "[AppConfig]") {
         "password":"PASSWORD"
       },
       "options": {
+        "dateEnd": "2020-11-23",
         "users": ["User1", "User2"]
       }
     }
   )";
-  auto const appConfigOrError = jwlrep::createAppConfig(config);
+  auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
+  REQUIRE(appConfigOrError.has_error());
+  REQUIRE(appConfigOrError.error() == jwlrep::GeneralError::InvalidAppConfig);
+}
+
+TEST_CASE("Invalid config. Missing dateEnd.", "[AppConfig]") {
+  auto const config = R"(
+    {
+      "credentials": {
+        "server":"my.server.com",
+        "userName":"LOGIN",
+        "password":"PASSWORD"
+      },
+      "options": {
+        "dateStart: "2020-11-21",
+        "users": ["User1", "User2"]
+      }
+    }
+  )";
+  auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
   REQUIRE(appConfigOrError.has_error());
   REQUIRE(appConfigOrError.error() == jwlrep::GeneralError::InvalidAppConfig);
 }
@@ -125,16 +156,17 @@ TEST_CASE("Invalid config. Missing users.", "[AppConfig]") {
         "password":"PASSWORD"
       },
       "options": {
-        "weekNum": 41
+        "dateStart": "2020-11-21",
+        "dateEnd": "2020-11-23"
       }
     }
   )";
-  auto const appConfigOrError = jwlrep::createAppConfig(config);
+  auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
   REQUIRE(appConfigOrError.has_error());
   REQUIRE(appConfigOrError.error() == jwlrep::GeneralError::InvalidAppConfig);
 }
 
-TEST_CASE("Invalid config. WeekNum must be int.", "[AppConfig]") {
+TEST_CASE("Invalid config. DateStart wrong format", "[AppConfig]") {
   auto const config = R"(
     {
       "credentials": {
@@ -143,12 +175,33 @@ TEST_CASE("Invalid config. WeekNum must be int.", "[AppConfig]") {
         "password":"PASSWORD"
       },
       "options": {
-        "weekNum": "some_string",
+        "dateStart": "2020-Nov-21",
+        "dateEnd": "2020-11-23",
         "users": ["User1", "User2"]
       }
     }
   )";
-  auto const appConfigOrError = jwlrep::createAppConfig(config);
+  auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
+  REQUIRE(appConfigOrError.has_error());
+  REQUIRE(appConfigOrError.error() == jwlrep::GeneralError::InvalidAppConfig);
+}
+
+TEST_CASE("Invalid config. DateEnd wrong format", "[AppConfig]") {
+  auto const config = R"(
+    {
+      "credentials": {
+        "server":"my.server.com",
+        "userName":"LOGIN",
+        "password":"PASSWORD"
+      },
+      "options": {
+        "dateStart": "2020-11-21",
+        "dateEnd": "2020-Nov-23",
+        "users": ["User1", "User2"]
+      }
+    }
+  )";
+  auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
   REQUIRE(appConfigOrError.has_error());
   REQUIRE(appConfigOrError.error() == jwlrep::GeneralError::InvalidAppConfig);
 }

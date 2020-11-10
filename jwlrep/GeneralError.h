@@ -18,7 +18,8 @@ enum class GeneralError {
   WrongStartupParams,
   InvalidAppConfig,
   StartupFailed,
-  Interrupted
+  Interrupted,
+  SystemError
 };
 
 namespace detail {
