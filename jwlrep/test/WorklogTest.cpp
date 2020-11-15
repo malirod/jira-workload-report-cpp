@@ -60,7 +60,7 @@ TEST_CASE("Worklog: valid user timesheet", "[Worklog]") {
   }
   )";
   auto const userTimersheetOrError =
-      jwlrep::createUserTimersheetFromJson(worklogJsonStr);
+      jwlrep::createUserTimeSheetFromJson(worklogJsonStr);
   REQUIRE(userTimersheetOrError.has_value());
   auto const& userTimersheet = userTimersheetOrError.value();
   REQUIRE(userTimersheet.worklog().size() == 3u);
@@ -87,10 +87,10 @@ TEST_CASE("Worklog: Invalid user timesheet. Bad Json.", "[Worklog]") {
             "fields": []
         }
   )";
-  auto const userTimersheetOrError =
-      jwlrep::createUserTimersheetFromJson(worklogJsonStr);
-  REQUIRE(userTimersheetOrError.has_error());
-  REQUIRE(userTimersheetOrError.error() == std::errc::invalid_argument);
+  auto const userTimeSheetOrError =
+      jwlrep::createUserTimeSheetFromJson(worklogJsonStr);
+  REQUIRE(userTimeSheetOrError.has_error());
+  REQUIRE(userTimeSheetOrError.error() == std::errc::invalid_argument);
 }
 
 TEST_CASE("Worklog: Invalid user timesheet. Missing key", "[Worklog]") {
@@ -110,10 +110,10 @@ TEST_CASE("Worklog: Invalid user timesheet. Missing key", "[Worklog]") {
       "fields": []
   }
   )";
-  auto const userTimersheetOrError =
-      jwlrep::createUserTimersheetFromJson(worklogJsonStr);
-  REQUIRE(userTimersheetOrError.has_error());
-  REQUIRE(userTimersheetOrError.error() == std::errc::invalid_argument);
+  auto const userTimeSheetOrError =
+      jwlrep::createUserTimeSheetFromJson(worklogJsonStr);
+  REQUIRE(userTimeSheetOrError.has_error());
+  REQUIRE(userTimeSheetOrError.error() == std::errc::invalid_argument);
 }
 
 TEST_CASE("Worklog: Invalid user timesheet. Missing summary", "[Worklog]") {
@@ -133,8 +133,8 @@ TEST_CASE("Worklog: Invalid user timesheet. Missing summary", "[Worklog]") {
       "fields": []
   }
   )";
-  auto const userTimersheetOrError =
-      jwlrep::createUserTimersheetFromJson(worklogJsonStr);
-  REQUIRE(userTimersheetOrError.has_error());
-  REQUIRE(userTimersheetOrError.error() == std::errc::invalid_argument);
+  auto const userTimeSheetOrError =
+      jwlrep::createUserTimeSheetFromJson(worklogJsonStr);
+  REQUIRE(userTimeSheetOrError.has_error());
+  REQUIRE(userTimeSheetOrError.error() == std::errc::invalid_argument);
 }

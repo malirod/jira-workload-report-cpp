@@ -53,9 +53,9 @@ class Worklog {
   std::vector<Entry> entries_;
 };
 
-class UserTimersheet {
+class UserTimeSheet {
  public:
-  explicit UserTimersheet(std::vector<Worklog>&& worklog);
+  explicit UserTimeSheet(std::vector<Worklog>&& worklog);
 
   std::vector<Worklog> const& worklog() const;
 
@@ -63,7 +63,7 @@ class UserTimersheet {
   std::vector<Worklog> worklog_;
 };
 
-Expected<UserTimersheet> createUserTimersheetFromJson(
-    std::string const& userTimersheetJsonStr);
+Expected<UserTimeSheet> createUserTimeSheetFromJson(
+    std::string const& userTimeSheetJsonStr);
 
 } // namespace jwlrep

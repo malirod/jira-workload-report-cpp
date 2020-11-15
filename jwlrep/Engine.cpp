@@ -10,6 +10,7 @@
 #include <jwlrep/IEngineEventHandler.h>
 #include <jwlrep/Logger.h>
 #include <jwlrep/NetUtil.h>
+#include <jwlrep/Report.h>
 #include <jwlrep/RootCertificates.h>
 #include <jwlrep/Worklog.h>
 
@@ -132,15 +133,19 @@ void Engine::queryTimesheets() {
                  dnsLookupResultsOrError.error().message());
     return;
   }
-
+  SPDLOG_INFO("Start date: {}",
+              boost::gregorian::to_iso_extended_string(
+                  appConfig_.options().dateStart()));
+  SPDLOG_INFO(
+      "End date: {}",
+      boost::gregorian::to_iso_extended_string(appConfig_.options().dateEnd()));
   auto const requestStr = fmt::format(
       "/rest/timesheet-gadget/1.0/"
       "raw-timesheet.json?targetUser={}&startDate={}&endDate={}",
-      base64Encode("USERNAME"),
-      base64Encode(boost::gregorian::to_iso_extended_string(
-          appConfig_.options().dateStart())),
-      base64Encode(boost::gregorian::to_iso_extended_string(
-          appConfig_.options().dateEnd())));
+      "USERNAME",
+      boost::gregorian::to_iso_extended_string(
+          appConfig_.options().dateStart()),
+      boost::gregorian::to_iso_extended_string(appConfig_.options().dateEnd()));
   http::request<http::empty_body> request{http::verb::get, requestStr, 10};
 
   request.set(http::field::authorization,
@@ -148,6 +153,9 @@ void Engine::queryTimesheets() {
                              fmt::format("{}:{}",
                                          appConfig_.credentials().userName(),
                                          appConfig_.credentials().password())));
+  std::stringstream ss;
+  ss << request;
+  SPDLOG_INFO("Request:\n{}", ss.str());
   auto const responseOrError = httpGet(*ioContext_,
                                        *sslContext_,
                                        dnsLookupResultsOrError.value(),
@@ -160,24 +168,28 @@ void Engine::queryTimesheets() {
                  responseOrError.error().message());
     return;
   }
-  auto const userTimerSheetOrError =
-      createUserTimersheetFromJson(responseOrError.value().body());
-  if (!userTimerSheetOrError) {
+  if (responseOrError.value().result() != http::status::ok) {
+    SPDLOG_ERROR("Request has failed with result {}",
+                 jwlrep::ToIntegral(responseOrError.value().result()));
+    return;
+  }
+  auto const userTimeSheetOrError =
+      createUserTimeSheetFromJson(responseOrError.value().body());
+  if (!userTimeSheetOrError) {
     SPDLOG_ERROR("Failed to parse timesheet for user {}. Error: {}",
                  "rmalynovskyi",
                  responseOrError.error().message());
     return;
   }
   // move timesheet to heap to be able to move it to the queue
-  auto const userTimersheetPtr = std::make_unique<UserTimersheet>(
-      std::move(userTimerSheetOrError.value()));
+  auto const userTimeSheetPtr =
+      std::make_unique<UserTimeSheet>(std::move(userTimeSheetOrError.value()));
 
-  // auto const& userTimersheet = userTimerSheetOrError.value();
-  for (auto const& worklogItem : userTimersheetPtr->worklog()) {
-    SPDLOG_INFO("Worklog item key:{}, summary: {}",
-                worklogItem.key(),
-                worklogItem.summary());
-  }
+  std::vector<std::reference_wrapper<UserTimeSheet>> timeSheets;
+  timeSheets.reserve(1);
+  timeSheets.push_back(*userTimeSheetPtr);
+
+  createReportExcel(timeSheets, appConfig_.options());
 }
 
 } // namespace jwlrep

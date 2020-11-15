@@ -39,9 +39,9 @@ struct adl_serializer<jwlrep::Worklog> {
 };
 
 template <>
-struct adl_serializer<jwlrep::UserTimersheet> {
-  static jwlrep::UserTimersheet from_json(json const& json) {
-    return jwlrep::UserTimersheet{
+struct adl_serializer<jwlrep::UserTimeSheet> {
+  static jwlrep::UserTimeSheet from_json(json const& json) {
+    return jwlrep::UserTimeSheet{
         json["worklog"].get<std::vector<jwlrep::Worklog>>()};
     ;
   }
@@ -124,20 +124,23 @@ bool isJsonValid(nlohmann::json const& json) {
 
 namespace jwlrep {
 
-Expected<UserTimersheet> createUserTimersheetFromJson(
-    std::string const& userTimersheetJsonStr) {
-  auto const userTimersheetJson =
-      nlohmann::json::parse(userTimersheetJsonStr, nullptr, false, true);
+Expected<UserTimeSheet> createUserTimeSheetFromJson(
+    std::string const& userTimeSheetJsonStr) {
+  SPDLOG_INFO("Timesheet:\n{}", userTimeSheetJsonStr);
+  auto const userTimeSheetJson =
+      nlohmann::json::parse(userTimeSheetJsonStr, nullptr, false, true);
 
-  if (userTimersheetJson.is_discarded()) {
-    SPDLOG_ERROR("Failed to parse worklog: json is not valid");
+  if (userTimeSheetJson.is_discarded()) {
+    SPDLOG_ERROR("Failed to parse worklog: json is not valid:\n{}",
+                 userTimeSheetJsonStr);
     return make_error_code(std::errc::invalid_argument);
   }
 
-  if (!isJsonValid(userTimersheetJson)) {
+  if (!isJsonValid(userTimeSheetJson)) {
+    SPDLOG_ERROR("Worklog json is not valid:\n{}", userTimeSheetJsonStr);
     return make_error_code(std::errc::invalid_argument);
   }
-  return userTimersheetJson.get<UserTimersheet>();
+  return userTimeSheetJson.get<UserTimeSheet>();
 }
 
 Worklog::Worklog(std::string const& key,
@@ -176,11 +179,11 @@ boost::gregorian::date const& Entry::created() const {
   return created_;
 }
 
-UserTimersheet::UserTimersheet(std::vector<Worklog>&& worklog)
+UserTimeSheet::UserTimeSheet(std::vector<Worklog>&& worklog)
     : worklog_(std::move(worklog)) {
 }
 
-std::vector<Worklog> const& UserTimersheet::worklog() const {
+std::vector<Worklog> const& UserTimeSheet::worklog() const {
   return worklog_;
 }
 

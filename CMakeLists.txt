@@ -49,6 +49,7 @@ find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(nlohmann_json_schema_validator REQUIRED)
 find_package(OpenSSL REQUIRED)
+find_package(xlnt REQUIRED)
 
 # Project lib configuration
 set(LIB_NAME jwlreplib)
@@ -83,7 +84,9 @@ set(LIB_SRC_LIST
     "jwlrep/Worklog.h"
     "jwlrep/Worklog.cpp"
     "jwlrep/DateTimeUtil.h"
-    "jwlrep/DateTimeUtil.cpp")
+    "jwlrep/DateTimeUtil.cpp"
+    "jwlrep/Report.h"
+    "jwlrep/Report.cpp")
 
 add_library(${LIB_NAME} ${LIB_SRC_LIST})
 add_library(jwlrep::${LIB_NAME} ALIAS ${LIB_NAME})
@@ -111,7 +114,8 @@ target_link_libraries(
           nlohmann_json_schema_validator
           Boost::context
           OpenSSL::SSL
-          OpenSSL::Crypto)
+          OpenSSL::Crypto
+          xlnt::xlnt)
 
 if(MSVC)
   target_link_libraries(${LIB_NAME} INTERFACE Crypt32.lib)
