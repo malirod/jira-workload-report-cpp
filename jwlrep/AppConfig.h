@@ -7,7 +7,6 @@
 #include <jwlrep/Outcome.h>
 
 #include <boost/date_time/gregorian/gregorian.hpp>
-
 #include <string>
 #include <vector>
 
@@ -15,15 +14,13 @@ namespace jwlrep {
 
 class Credentials {
  public:
-  Credentials(std::string const& server,
-              std::string const& userName,
-              std::string const& password);
+  Credentials(std::string server, std::string userName, std::string password);
 
-  std::string const& server() const;
+  [[nodiscard]] auto server() const -> std::string const&;
 
-  std::string const& userName() const;
+  [[nodiscard]] auto userName() const -> std::string const&;
 
-  std::string const& password() const;
+  [[nodiscard]] auto password() const -> std::string const&;
 
  private:
   std::string server_;
@@ -35,15 +32,14 @@ class Credentials {
 
 class Options {
  public:
-  Options(boost::gregorian::date dateStart,
-          boost::gregorian::date dateEnd,
+  Options(boost::gregorian::date dateStart, boost::gregorian::date dateEnd,
           std::vector<std::string>&& users);
 
-  boost::gregorian::date const& dateStart() const;
+  [[nodiscard]] auto dateStart() const -> boost::gregorian::date const&;
 
-  boost::gregorian::date const& dateEnd() const;
+  [[nodiscard]] auto dateEnd() const -> boost::gregorian::date const&;
 
-  std::vector<std::string> const& users() const;
+  [[nodiscard]] auto users() const -> std::vector<std::string> const&;
 
  private:
   boost::gregorian::date dateStart_;
@@ -57,9 +53,9 @@ class AppConfig {
  public:
   AppConfig(Credentials&& credentials, Options&& options);
 
-  Credentials const& credentials() const;
+  [[nodiscard]] auto credentials() const -> Credentials const&;
 
-  Options const& options() const;
+  [[nodiscard]] auto options() const -> Options const&;
 
  private:
   Credentials credentials_;
@@ -67,9 +63,9 @@ class AppConfig {
   Options options_;
 };
 
-Expected<AppConfig> createAppConfigFromJson(
-    std::string const& configFileJsonStr);
+auto createAppConfigFromJson(std::string const& configFileJsonStr)
+    -> Expected<AppConfig>;
 
-Expected<AppConfig> processCmdArgs(int argc, char** argv);
+auto processCmdArgs(int argc, char** argv) -> Expected<AppConfig>;
 
-} // namespace jwlrep
+}  // namespace jwlrep

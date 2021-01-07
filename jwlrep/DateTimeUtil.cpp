@@ -6,11 +6,11 @@
 
 namespace jwlrep {
 
-boost::posix_time::ptime dateTimeFromMSecSinceEpoch(
-    boost::posix_time::milliseconds msec) {
+auto dateTimeFromMSecSinceEpoch(boost::posix_time::milliseconds msec)
+    -> boost::posix_time::ptime {
   static const boost::posix_time::ptime epoch(
       boost::gregorian::date(1970, 1, 1));
   return epoch + msec;
 }
 
-} // namespace jwlrep
+}  // namespace jwlrep

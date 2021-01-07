@@ -5,7 +5,6 @@
 #pragma once
 
 #include <boost/asio/ssl.hpp>
-
 #include <string>
 
 namespace detail {
@@ -89,11 +88,10 @@ inline void loadRootCertificates(boost::asio::ssl::context& ctx,
 
   ctx.add_certificate_authority(boost::asio::buffer(cert.data(), cert.size()),
                                 errorCode);
-  if (errorCode)
-    return;
+  if (errorCode) return;
 }
 
-} // namespace detail
+}  // namespace detail
 
 // Load the root certificates into an ssl::context
 
@@ -105,6 +103,5 @@ inline void loadRootCertificates(boost::asio::ssl::context& ctx,
 inline void loadRootCertificates(boost::asio::ssl::context& ctx) {
   boost::system::error_code ec;
   detail::loadRootCertificates(ctx, ec);
-  if (ec)
-    throw boost::system::system_error{ec};
+  if (ec) throw boost::system::system_error{ec};
 }

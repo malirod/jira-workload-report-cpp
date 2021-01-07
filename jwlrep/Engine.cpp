@@ -2,58 +2,39 @@
 
 // Copyright (C) 2020 Malinovsky Rodion (rodionmalino@gmail.com)
 
-#include <jwlrep/Engine.h>
-
 #include <jwlrep/AppConfig.h>
 #include <jwlrep/Base64.h>
+#include <jwlrep/Engine.h>
 #include <jwlrep/EnumUtil.h>
+#include <jwlrep/ExcelReport.h>
 #include <jwlrep/IEngineEventHandler.h>
 #include <jwlrep/Logger.h>
 #include <jwlrep/NetUtil.h>
-#include <jwlrep/Report.h>
 #include <jwlrep/RootCertificates.h>
+#include <jwlrep/ScopeGuard.h>
 #include <jwlrep/Worklog.h>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/beast.hpp>
 #include <boost/beast/http.hpp>
-
 #include <boost/fiber/asio/round_robin.hpp>
 #include <boost/fiber/asio/yield.hpp>
-
 #include <cassert>
 #include <utility>
 
-namespace {
-
-constexpr std::size_t kBufferCapacity = 1024;
-
-} // namespace
 namespace jwlrep {
 
 Engine::Engine(std::shared_ptr<boost::asio::io_context> ioContext,
                IEngineEventHandler& engineEventHandler,
                AppConfig const& appConfig)
-    : ioContext_(ioContext),
+    : ioContext_(std::move(ioContext)),
       engineEventHandler_(engineEventHandler),
-      appConfig_(appConfig),
-      channel_(std::make_unique<boost::fibers::buffered_channel<int>>(
-          kBufferCapacity)) {
-  SPDLOG_DEBUG("Engine has been created.");
+      appConfig_(appConfig) {
+  LOG_DEBUG("Engine has been created.");
   assert(ioContext_);
   boost::fibers::use_scheduling_algorithm<boost::fibers::asio::round_robin>(
       ioContext_);
-}
-
-Engine::~Engine() {
-  ioContext_->stop();
-  SPDLOG_DEBUG("Engine has been destroyed.");
-}
-
-void Engine::start() {
-  SPDLOG_DEBUG("Starting engine");
-  assert(initiated_);
 
   sslContext_ = std::make_unique<boost::asio::ssl::context>(
       boost::asio::ssl::context::tlsv12_client);
@@ -61,135 +42,137 @@ void Engine::start() {
   loadRootCertificates(*sslContext_);
 
   sslContext_->set_verify_mode(boost::asio::ssl::verify_peer);
+}
+
+void Engine::start() {
+  LOG_DEBUG("Starting engine");
 
   boost::fibers::fiber([this]() {
-    SPDLOG_DEBUG("Launched main fiber");
+    LOG_DEBUG("Launched main fiber");
+
+    ScopeGuard const guard{[&]() {
+      LOG_DEBUG("Finished main fiber");
+      stop();
+    }};
+
     try {
-      engineEventHandler_.onEngineStarted();
+      boost::asio::post(*ioContext_,
+                        [this]() { engineEventHandler_.onEngineStarted(); });
 
-      // ---------------
-      queryTimesheets();
-      // ---------------
+      auto const timeSheetsOrError = loadTimesheets();
 
-      // decltype(channel_)::element_type::value_type value;
-      // while (boost::fibers::channel_op_status::success ==
-      //       channel_->pop(value)) {
+      if (!timeSheetsOrError) {
+        LOG_ERROR("Failed to load timesheets: {}",
+                  timeSheetsOrError.error().message());
+        return;
+      }
 
-      // SPDLOG_DEBUG("Popped: {}", value);
-      //}
+      generateTimesheetsXSLTReport(timeSheetsOrError.value());
 
     } catch (std::exception const& e) {
-      SPDLOG_ERROR("Got exception in main fiber: {}", e.what());
+      LOG_ERROR("Got exception in main fiber: {}", e.what());
     }
-
-    engineEventHandler_.onEngineStopped();
-
-    ioContext_->stop();
-
-    SPDLOG_DEBUG("Finished main fiber");
   }).detach();
 
-  SPDLOG_DEBUG("Engine has been launched.");
-
-  return;
+  LOG_DEBUG("Engine has been launched.");
 }
 
 void Engine::stop() {
-  SPDLOG_DEBUG("Stopping engine");
-  assert(initiated_);
+  LOG_DEBUG("Stopping engine");
 
-  if (channel_->is_closed()) {
-    SPDLOG_DEBUG("Already stopped. Skip.");
-    return;
-  }
-  channel_->push(100);
-  channel_->close();
-
-  return;
+  boost::asio::post(*ioContext_,
+                    [this]() { engineEventHandler_.onEngineStopped(); });
 }
 
-bool Engine::init() {
-  assert(!initiated_);
-
-  initiated_ = true;
-  return initiated_;
-}
-
-void Engine::queryTimesheets() {
+auto Engine::loadTimesheets() -> Expected<TimeSheets> {
   namespace http = boost::beast::http;
-  using tcp = boost::asio::ip::tcp;
   auto& yield = boost::fibers::asio::this_yield();
-  namespace beast = boost::beast;
-  namespace net = boost::asio;
-  namespace ssl = boost::asio::ssl;
 
-  SPDLOG_DEBUG("Query timesheets for all users");
+  auto makeHttpRequest = [&options = appConfig_.options(),
+                          &credentials =
+                              appConfig_.credentials()](auto const& userName) {
+    auto const requestStr = fmt::format(
+        "/rest/timesheet-gadget/1.0/"
+        "raw-timesheet.json?targetUser={}&startDate={}&endDate={}",
+        userName, boost::gregorian::to_iso_extended_string(options.dateStart()),
+        boost::gregorian::to_iso_extended_string(options.dateEnd()));
+    auto const kHTTPVersion = 10;
+    http::request<http::empty_body> request{http::verb::get, requestStr,
+                                            kHTTPVersion};
+
+    request.set(
+        http::field::authorization,
+        "Basic " + base64Encode(fmt::format("{}:{}", credentials.userName(),
+                                            credentials.password())));
+    return request;
+  };
+
+  LOG_DEBUG(
+      "Query timesheets for all users for time period: {} - {}",
+      boost::gregorian::to_iso_extended_string(
+          appConfig_.options().dateStart()),
+      boost::gregorian::to_iso_extended_string(appConfig_.options().dateEnd()));
 
   auto dnsLookupResultsOrError =
       dnsLookup(*ioContext_, appConfig_.credentials().server(), "https", yield);
   if (!dnsLookupResultsOrError) {
-    SPDLOG_ERROR("Failed to dns lookup for url {}. Error: {}",
-                 appConfig_.credentials().server(),
-                 dnsLookupResultsOrError.error().message());
-    return;
+    LOG_ERROR("Failed to make dns lookup for url {}. Error: {}",
+              appConfig_.credentials().server(),
+              dnsLookupResultsOrError.error().message());
+    return dnsLookupResultsOrError.error();
   }
-  SPDLOG_INFO("Start date: {}",
-              boost::gregorian::to_iso_extended_string(
-                  appConfig_.options().dateStart()));
-  SPDLOG_INFO(
-      "End date: {}",
-      boost::gregorian::to_iso_extended_string(appConfig_.options().dateEnd()));
-  auto const requestStr = fmt::format(
-      "/rest/timesheet-gadget/1.0/"
-      "raw-timesheet.json?targetUser={}&startDate={}&endDate={}",
-      "USERNAME",
-      boost::gregorian::to_iso_extended_string(
-          appConfig_.options().dateStart()),
-      boost::gregorian::to_iso_extended_string(appConfig_.options().dateEnd()));
-  http::request<http::empty_body> request{http::verb::get, requestStr, 10};
 
-  request.set(http::field::authorization,
-              "Basic " + base64Encode(
-                             fmt::format("{}:{}",
-                                         appConfig_.credentials().userName(),
-                                         appConfig_.credentials().password())));
-  std::stringstream ss;
-  ss << request;
-  SPDLOG_INFO("Request:\n{}", ss.str());
-  auto const responseOrError = httpGet(*ioContext_,
-                                       *sslContext_,
-                                       dnsLookupResultsOrError.value(),
-                                       request,
-                                       std::chrono::seconds(10),
-                                       yield);
-  if (!responseOrError) {
-    SPDLOG_ERROR("Failed to get data for user {}. Error: {}",
-                 "rmalynovskyi",
-                 responseOrError.error().message());
-    return;
-  }
-  if (responseOrError.value().result() != http::status::ok) {
-    SPDLOG_ERROR("Request has failed with result {}",
-                 jwlrep::ToIntegral(responseOrError.value().result()));
-    return;
-  }
-  auto const userTimeSheetOrError =
-      createUserTimeSheetFromJson(responseOrError.value().body());
-  if (!userTimeSheetOrError) {
-    SPDLOG_ERROR("Failed to parse timesheet for user {}. Error: {}",
-                 "rmalynovskyi",
-                 responseOrError.error().message());
-    return;
-  }
-  // move timesheet to heap to be able to move it to the queue
-  auto const userTimeSheetPtr =
-      std::make_unique<UserTimeSheet>(std::move(userTimeSheetOrError.value()));
+  TimeSheets timeSheets;
+  timeSheets.reserve(appConfig_.options().users().size());
 
-  std::vector<std::reference_wrapper<UserTimeSheet>> timeSheets;
-  timeSheets.reserve(1);
-  timeSheets.push_back(*userTimeSheetPtr);
+  // It has to be shared ptr otherwise there will be the crash. Due to
+  // cooperative mode outer function will exit (and barrier will be destroyed)
+  // before last sub-fiber will exit
+  auto barrier = std::make_shared<boost::fibers::barrier>(
+      appConfig_.options().users().size() + 1);
+  for (auto const& user : appConfig_.options().users()) {
+    LOG_DEBUG("Start getting data for the user {}", user);
+    boost::fibers::fiber([barrier, &makeHttpRequest, &dnsLookupResultsOrError,
+                          &user, &yield, &timeSheets, this]() {
+      auto request = makeHttpRequest(user);
 
+      auto const responseOrError =
+          httpGet(*ioContext_, *sslContext_, dnsLookupResultsOrError.value(),
+                  request, std::chrono::seconds(10), yield);
+      if (!responseOrError) {
+        LOG_ERROR("Failed to get data for user {}. Error: {}", user,
+                  responseOrError.error().message());
+        return;
+      }
+      if (responseOrError.value().result() != http::status::ok) {
+        LOG_ERROR("Request has failed with result {}",
+                  jwlrep::ToIntegral(responseOrError.value().result()));
+        return;
+      }
+      auto userTimeSheetOrError =
+          createUserTimeSheetFromJson(responseOrError.value().body());
+      if (!userTimeSheetOrError) {
+        LOG_ERROR("Failed to parse timesheet for user {}. Error: {}", user,
+                  responseOrError.error().message());
+        return;
+      }
+
+      timeSheets.emplace_back(std::move(userTimeSheetOrError.value()));
+
+      LOG_DEBUG("Got data for the user {}", user);
+
+      barrier->wait();
+    }).detach();
+  }
+
+  barrier->wait();
+  LOG_DEBUG("Got all timesheets");
+  return timeSheets;
+}
+
+void Engine::generateTimesheetsXSLTReport(TimeSheets const& timeSheets) {
+  LOG_DEBUG("Generating report");
   createReportExcel(timeSheets, appConfig_.options());
 }
 
-} // namespace jwlrep
+}  // namespace jwlrep

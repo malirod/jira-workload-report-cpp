@@ -7,7 +7,6 @@
 #include <jwlrep/Outcome.h>
 
 #include <boost/date_time/gregorian/gregorian.hpp>
-
 #include <string>
 #include <vector>
 
@@ -15,15 +14,14 @@ namespace jwlrep {
 
 class Entry {
  public:
-  Entry(std::chrono::seconds const& timeSpent,
-        std::string const& author,
-        boost::gregorian::date const& created);
+  Entry(std::chrono::seconds timeSpent, std::string author,
+        boost::gregorian::date created);
 
-  std::chrono::seconds const& timeSpent() const;
+  [[nodiscard]] auto timeSpent() const -> std::chrono::seconds const&;
 
-  std::string const& author() const;
+  [[nodiscard]] auto author() const -> std::string const&;
 
-  boost::gregorian::date const& created() const;
+  [[nodiscard]] auto created() const -> boost::gregorian::date const&;
 
  private:
   std::chrono::seconds timeSpent_;
@@ -35,15 +33,13 @@ class Entry {
 
 class Worklog {
  public:
-  Worklog(std::string const& key,
-          std::string const& summary,
-          std::vector<Entry>&& entries);
+  Worklog(std::string key, std::string summary, std::vector<Entry>&& entries);
 
-  std::string const& key() const;
+  [[nodiscard]] auto key() const -> std::string const&;
 
-  std::string const& summary() const;
+  [[nodiscard]] auto summary() const -> std::string const&;
 
-  std::vector<Entry> const& entries() const;
+  [[nodiscard]] auto entries() const -> std::vector<Entry> const&;
 
  private:
   std::string key_;
@@ -57,13 +53,15 @@ class UserTimeSheet {
  public:
   explicit UserTimeSheet(std::vector<Worklog>&& worklog);
 
-  std::vector<Worklog> const& worklog() const;
+  [[nodiscard]] auto worklog() const -> std::vector<Worklog> const&;
 
  private:
   std::vector<Worklog> worklog_;
 };
 
-Expected<UserTimeSheet> createUserTimeSheetFromJson(
-    std::string const& userTimeSheetJsonStr);
+using TimeSheets = std::vector<UserTimeSheet>;
 
-} // namespace jwlrep
+auto createUserTimeSheetFromJson(std::string const& userTimeSheetJsonStr)
+    -> Expected<UserTimeSheet>;
+
+}  // namespace jwlrep

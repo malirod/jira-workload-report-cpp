@@ -14,4 +14,4 @@ namespace jwlrep {
 template <typename T>
 using Expected = outcome::result<T, std::error_code>;
 
-} // namespace jwlrep
+}  // namespace jwlrep

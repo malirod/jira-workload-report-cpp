@@ -6,7 +6,6 @@
 #include <jwlrep/ErrorCodeUtil.h>
 
 #include <boost/asio/error.hpp>
-
 #include <catch2/catch.hpp>
 
 TEST_CASE("Convert general boost error code to appropriate std error code",

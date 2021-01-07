@@ -9,8 +9,7 @@
 namespace jwlrep {
 
 SignalHandler::SignalHandler(SignalHandlerCallback handler)
-    : handler_(std::move(handler)) {
-}
+    : handler_(std::move(handler)) {}
 
 void SignalHandler::install(boost::asio::io_service& ioService,
                             std::vector<int> const& signals) {
@@ -19,11 +18,9 @@ void SignalHandler::install(boost::asio::io_service& ioService,
     signals_->add(signal);
   }
   signals_->async_wait(
-      [&](auto const&, auto signal) { signalReceived(signal); });
+      [&](auto const& /*unused*/, auto signal) { signalReceived(signal); });
 }
 
-void SignalHandler::signalReceived(int) noexcept {
-  handler_();
-}
+void SignalHandler::signalReceived(int /*unused*/) noexcept { handler_(); }
 
-} // namespace jwlrep
+}  // namespace jwlrep

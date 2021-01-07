@@ -7,7 +7,7 @@
 #include <catch2/catch.hpp>
 
 TEST_CASE("Worklog: valid user timesheet", "[Worklog]") {
-  auto const worklogJsonStr = R"(
+  char const *const worklogJsonStr = R"(
     {
     "worklog": [{
             "key": "Key1",
@@ -62,15 +62,15 @@ TEST_CASE("Worklog: valid user timesheet", "[Worklog]") {
   auto const userTimersheetOrError =
       jwlrep::createUserTimeSheetFromJson(worklogJsonStr);
   REQUIRE(userTimersheetOrError.has_value());
-  auto const& userTimersheet = userTimersheetOrError.value();
-  REQUIRE(userTimersheet.worklog().size() == 3u);
-  REQUIRE(userTimersheet.worklog()[1u].entries().size() == 2u);
-  REQUIRE(userTimersheet.worklog()[1u].entries()[1u].author() == "user1");
-  REQUIRE(userTimersheet.worklog()[1u].entries()[1u].created().month() == 11);
+  auto const &userTimersheet = userTimersheetOrError.value();
+  REQUIRE(userTimersheet.worklog().size() == 3U);
+  REQUIRE(userTimersheet.worklog()[1U].entries().size() == 2U);
+  REQUIRE(userTimersheet.worklog()[1U].entries()[1U].author() == "user1");
+  REQUIRE(userTimersheet.worklog()[1U].entries()[1U].created().month() == 11);
 }
 
 TEST_CASE("Worklog: Invalid user timesheet. Bad Json.", "[Worklog]") {
-  auto const worklogJsonStr = R"(
+  char const *const worklogJsonStr = R"(
     {
     "worklog": [{
             "key" - "Key1",
@@ -94,7 +94,7 @@ TEST_CASE("Worklog: Invalid user timesheet. Bad Json.", "[Worklog]") {
 }
 
 TEST_CASE("Worklog: Invalid user timesheet. Missing key", "[Worklog]") {
-  auto const worklogJsonStr = R"(
+  char const *const worklogJsonStr = R"(
   {
   "worklog": [{
       "summary": "Summary1",
@@ -117,7 +117,7 @@ TEST_CASE("Worklog: Invalid user timesheet. Missing key", "[Worklog]") {
 }
 
 TEST_CASE("Worklog: Invalid user timesheet. Missing summary", "[Worklog]") {
-  auto const worklogJsonStr = R"(
+  char const *const worklogJsonStr = R"(
   {
   "worklog": [{
       "key": "Key1",

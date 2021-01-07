@@ -7,8 +7,8 @@
 
 namespace jwlrep {
 
-std::error_code toStd(boost::system::error_code const& errorCode) {
+auto toStd(boost::system::error_code const& errorCode) -> std::error_code {
   return std::error_code(errorCode.value(), errorCode.category());
 }
 
-} // namespace jwlrep
+}  // namespace jwlrep

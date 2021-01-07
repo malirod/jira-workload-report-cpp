@@ -13,26 +13,24 @@
 namespace jwlrep {
 
 EngineLauncher::EngineLauncher(AppConfig appConfig)
-    : appConfig_(std::move(appConfig)) {
-}
+    : appConfig_(std::move(appConfig)) {}
 
 void EngineLauncher::onTerminationRequest() {
-  SPDLOG_INFO("Termination request received. Stopping.");
+  LOG_INFO("Termination request received. Stopping.");
   engine_->stop();
 }
 
-void EngineLauncher::onEngineStarted() {
-  SPDLOG_DEBUG("Engine started");
-}
+void EngineLauncher::onEngineStarted() { LOG_DEBUG("Engine started"); }
 
 void EngineLauncher::onEngineStopped() {
-  SPDLOG_DEBUG("Engine stopped");
+  LOG_DEBUG("Engine stopped");
+  ioContext_->stop();
 }
 
-std::error_code EngineLauncher::init() {
-  SPDLOG_INFO("Jira: {}", appConfig_.credentials().server());
+auto EngineLauncher::init() -> std::error_code {
+  LOG_INFO("Jira: {}", appConfig_.credentials().server());
 
-  ioContext_ = std::make_shared<boost::asio::io_service>();
+  ioContext_ = std::make_shared<boost::asio::io_context>();
 
   signalHandler_ =
       std::make_unique<SignalHandler>([this]() { onTerminationRequest(); });
@@ -40,33 +38,35 @@ std::error_code EngineLauncher::init() {
 
   engine_ = std::make_unique<Engine>(ioContext_, *this, appConfig_);
 
-  auto const initiated = engine_->init();
-  return initiated ? GeneralError::Success : GeneralError::StartupFailed;
+  LOG_DEBUG("Initiated");
+  return GeneralError::Success;
 }
 
 void EngineLauncher::deInit() {
+  assert(ioContext_->stopped());
+  LOG_DEBUG("Deinitiated");
 }
 
-std::error_code EngineLauncher::doRun() {
+auto EngineLauncher::doRun() -> std::error_code {
   engine_->start();
 
-  SPDLOG_INFO("Waiting for termination request");
+  LOG_INFO("Waiting for termination request");
 
   boost::system::error_code errorCode;
   ioContext_->run(errorCode);
   if (errorCode) {
-    SPDLOG_DEBUG("Main execution loop is done with error: {}",
-                 errorCode.message());
+    LOG_DEBUG("Main execution loop has finished with error: {}",
+              errorCode.message());
     return GeneralError::InternalError;
   }
 
   return GeneralError::Success;
 }
 
-std::error_code EngineLauncher::run() {
+auto EngineLauncher::run() -> std::error_code {
   const auto errorCode = init();
-  jwlrep::ScopeGuard const guard{[&]() { deInit(); }};
+  ScopeGuard const guard{[&]() { deInit(); }};
   return errorCode ? errorCode : doRun();
 }
 
-} // namespace jwlrep
+}  // namespace jwlrep

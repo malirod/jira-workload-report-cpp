@@ -6,7 +6,6 @@
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/signal_set.hpp>
-
 #include <functional>
 #include <vector>
 
@@ -19,7 +18,7 @@ namespace jwlrep {
 class SignalHandler {
  public:
   using SignalHandlerCallback = std::function<void()>;
-  explicit SignalHandler(SignalHandlerCallback const handler);
+  explicit SignalHandler(SignalHandlerCallback handler);
 
   ~SignalHandler() = default;
 
@@ -34,4 +33,4 @@ class SignalHandler {
   std::unique_ptr<boost::asio::signal_set> signals_;
 };
 
-} // namespace jwlrep
+}  // namespace jwlrep

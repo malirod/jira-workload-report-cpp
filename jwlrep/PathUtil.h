@@ -8,6 +8,6 @@
 
 namespace jwlrep {
 
-std::filesystem::path getExePath(char const* const argv0);
+auto getExePath(char const* argv0) -> std::filesystem::path;
 
-} // namespace jwlrep
+}  // namespace jwlrep

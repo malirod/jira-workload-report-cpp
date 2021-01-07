@@ -8,7 +8,7 @@
 #include <catch2/catch.hpp>
 
 TEST_CASE("Valid config", "[AppConfig]") {
-  auto const config = R"(
+  const auto *const config = R"(
     {
       "credentials": {
         "server":"my.server.com",
@@ -34,7 +34,7 @@ TEST_CASE("Valid config", "[AppConfig]") {
 }
 
 TEST_CASE("Invalid config. Bad Json.", "[AppConfig]") {
-  auto const config = R"(
+  const auto *const config = R"(
       "credentials": {
         "server":"my.server.com",
         "userName":"LOGIN",
@@ -53,7 +53,7 @@ TEST_CASE("Invalid config. Bad Json.", "[AppConfig]") {
 }
 
 TEST_CASE("Invalid config. Missing server.", "[AppConfig]") {
-  auto const config = R"(
+  const auto *const config = R"(
     {
       "credentials": {
         "userName":"LOGIN",
@@ -72,7 +72,7 @@ TEST_CASE("Invalid config. Missing server.", "[AppConfig]") {
 }
 
 TEST_CASE("Invalid config. Missing userName.", "[AppConfig]") {
-  auto const config = R"(
+  const auto *const config = R"(
     {
       "credentials": {
         "server":"my.server.com",
@@ -91,7 +91,7 @@ TEST_CASE("Invalid config. Missing userName.", "[AppConfig]") {
 }
 
 TEST_CASE("Invalid config. Missing password.", "[AppConfig]") {
-  auto const config = R"(
+  const auto *const config = R"(
     {
       "credentials": {
         "server":"my.server.com",
@@ -110,7 +110,7 @@ TEST_CASE("Invalid config. Missing password.", "[AppConfig]") {
 }
 
 TEST_CASE("Invalid config. Missing dateStart.", "[AppConfig]") {
-  auto const config = R"(
+  const auto *const config = R"(
     {
       "credentials": {
         "server":"my.server.com",
@@ -129,7 +129,7 @@ TEST_CASE("Invalid config. Missing dateStart.", "[AppConfig]") {
 }
 
 TEST_CASE("Invalid config. Missing dateEnd.", "[AppConfig]") {
-  auto const config = R"(
+  const auto *const config = R"(
     {
       "credentials": {
         "server":"my.server.com",
@@ -148,7 +148,7 @@ TEST_CASE("Invalid config. Missing dateEnd.", "[AppConfig]") {
 }
 
 TEST_CASE("Invalid config. Missing users.", "[AppConfig]") {
-  auto const config = R"(
+  const auto *const config = R"(
     {
       "credentials": {
         "server":"my.server.com",
@@ -167,7 +167,7 @@ TEST_CASE("Invalid config. Missing users.", "[AppConfig]") {
 }
 
 TEST_CASE("Invalid config. DateStart wrong format", "[AppConfig]") {
-  auto const config = R"(
+  const auto *const config = R"(
     {
       "credentials": {
         "server":"my.server.com",
@@ -187,7 +187,7 @@ TEST_CASE("Invalid config. DateStart wrong format", "[AppConfig]") {
 }
 
 TEST_CASE("Invalid config. DateEnd wrong format", "[AppConfig]") {
-  auto const config = R"(
+  const auto *const config = R"(
     {
       "credentials": {
         "server":"my.server.com",

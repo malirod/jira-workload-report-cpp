@@ -4,14 +4,12 @@
 
 #pragma once
 
-#include <string>
+#include <jwlrep/Worklog.h>
 
 namespace jwlrep {
 
-/**
- * Get current version.
- * @return version as string
- */
-auto getVersion() -> std::string;
+class Options;
+
+void createReportExcel(TimeSheets const& timeSheets, Options const& options);
 
 }  // namespace jwlrep

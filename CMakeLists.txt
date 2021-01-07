@@ -14,8 +14,11 @@ include(CTest)
 
 if(WIN32)
   # Set global warnings configuration for all sub-projects
-  # add_compile_options(-W4 -WX)
-  add_compile_options(-W4)
+  if(MSVC)
+    add_compile_options(-W4)
+  else()
+    add_compile_options(-Wall -Wextra)
+  endif()
 
   # Prevent Boost compleins about Win Version
   macro(get_WIN32_WINNT version)
@@ -85,8 +88,9 @@ set(LIB_SRC_LIST
     "jwlrep/Worklog.cpp"
     "jwlrep/DateTimeUtil.h"
     "jwlrep/DateTimeUtil.cpp"
-    "jwlrep/Report.h"
-    "jwlrep/Report.cpp")
+    "jwlrep/ExcelReport.h"
+    "jwlrep/ExcelReport.cpp"
+    "jwlrep/FiberUtil.h")
 
 add_library(${LIB_NAME} ${LIB_SRC_LIST})
 add_library(jwlrep::${LIB_NAME} ALIAS ${LIB_NAME})
@@ -100,7 +104,6 @@ set_property(
 target_include_directories(
   ${LIB_NAME} BEFORE PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
-# target_compile_features(${LIB_NAME} PRIVATE cxx_std_20)
 target_compile_features(${LIB_NAME} PRIVATE cxx_std_17)
 target_include_directories(${LIB_NAME} PRIVATE ${Boost_INCLUDE_DIRS})
 # make boost fiber asio placed in the project root available
@@ -126,7 +129,6 @@ target_link_libraries(${LIB_NAME} PUBLIC spdlog::spdlog)
 # App configuration
 set(APP_NAME jwlrep)
 add_executable(${APP_NAME} "jwlrep/LifeCycle.cpp")
-# target_compile_features(${APP_NAME} PRIVATE cxx_std_20)
 target_compile_features(${APP_NAME} PRIVATE cxx_std_17)
 target_include_directories(${APP_NAME} PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(${APP_NAME} PRIVATE jwlrep::${LIB_NAME})
@@ -160,7 +162,6 @@ if(BUILD_TESTING)
   target_include_directories(${TEST_LIB_NAME} PRIVATE test)
   target_include_directories(${TEST_LIB_NAME} PRIVATE ${Boost_INCLUDE_DIRS})
 
-  # target_compile_features(${TEST_LIB_NAME} PRIVATE cxx_std_20)
   target_compile_features(${TEST_LIB_NAME} PRIVATE cxx_std_17)
   target_link_libraries(${TEST_LIB_NAME} PUBLIC jwlrep::${LIB_NAME}
                                                 Catch2::Catch2)
@@ -174,7 +175,6 @@ if(BUILD_TESTING)
 
   add_executable(${TEST_RUNNER_NAME} "jwlrep/test/TestRunner.cpp")
 
-  # target_compile_features(${TEST_RUNNER_NAME} PRIVATE cxx_std_20)
   target_compile_features(${TEST_RUNNER_NAME} PRIVATE cxx_std_17)
   target_link_libraries(${TEST_RUNNER_NAME} PRIVATE ${TEST_LIB_NAME})
 

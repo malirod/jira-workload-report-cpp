@@ -5,7 +5,6 @@
 #include <jwlrep/EnumUtil.h>
 
 #include <catch2/catch.hpp>
-
 #include <sstream>
 
 namespace {
@@ -20,7 +19,7 @@ enum class EnumCustomInit {
   Bar,
 };
 
-} // namespace
+}  // namespace
 
 using jwlrep::EnumFromStream;
 using jwlrep::EnumStrings;

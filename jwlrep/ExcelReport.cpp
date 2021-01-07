@@ -2,28 +2,26 @@
 
 // Copyright (C) 2020 Malinovsky Rodion (rodionmalino@gmail.com)
 
-#include <jwlrep/Report.h>
-
 #include <jwlrep/AppConfig.h>
+#include <jwlrep/ExcelReport.h>
 #include <jwlrep/Logger.h>
 #include <jwlrep/Worklog.h>
 
-#include <xlnt/xlnt.hpp>
-
 #include <boost/algorithm/string.hpp>
+#include <xlnt/xlnt.hpp>
 
 namespace {
 
-std::size_t const kHeaderRow = 1u;
-std::size_t const kColumnIndexKey = 1u;
-std::size_t const kColumnIndexSummary = 2u;
-std::size_t const kColumnIndexAuthor = 3u;
-std::size_t const kColumnIndexDate = 4u;
-std::size_t const kColumnIndexSpent = 5u;
-std::size_t const kColumnIndexLabel = 6u;
-std::size_t const kColumnIndexProject = 7u;
-std::size_t const kColumnIndexCommon = 8u;
-std::size_t const kColumnIndexArch = 9u;
+std::size_t const kHeaderRow = 1U;
+std::size_t const kColumnIndexKey = 1U;
+std::size_t const kColumnIndexSummary = 2U;
+std::size_t const kColumnIndexAuthor = 3U;
+std::size_t const kColumnIndexDate = 4U;
+std::size_t const kColumnIndexSpent = 5U;
+std::size_t const kColumnIndexLabel = 6U;
+std::size_t const kColumnIndexProject = 7U;
+std::size_t const kColumnIndexCommon = 8U;
+std::size_t const kColumnIndexArch = 9U;
 
 char const *const kHeaderProject = "Project (h)";
 char const *const kHeaderCommon = "Common (h)";
@@ -50,7 +48,7 @@ void addHeadingToReport(xlnt::worksheet &worksheet) {
       .value(kHeaderArch);
 }
 
-std::string calculateLabel(std::string const &summary) {
+auto calculateLabel(std::string const &summary) -> std::string {
   using boost::algorithm::contains;
   using boost::algorithm::to_lower_copy;
 
@@ -108,8 +106,8 @@ void addWorklogSummaryToWorksheet(xlnt::worksheet &worksheet,
 
 void addWorklogToWorksheet(xlnt::worksheet &worksheet,
                            std::vector<jwlrep::Worklog> const &worklog,
-                           jwlrep::Options const &) {
-  std::uint32_t rowIndex = kHeaderRow + 1u;
+                           jwlrep::Options const & /*unused*/) {
+  std::uint32_t rowIndex = kHeaderRow + 1U;
   for (auto const &issue : worklog) {
     for (auto const &entry : issue.entries()) {
       worksheet.cell(xlnt::cell_reference(kColumnIndexKey, rowIndex))
@@ -120,8 +118,9 @@ void addWorklogToWorksheet(xlnt::worksheet &worksheet,
           .value(entry.author());
       worksheet.cell(xlnt::cell_reference(kColumnIndexDate, rowIndex))
           .value(boost::gregorian::to_iso_extended_string(entry.created()));
+      auto const kMSecsPerHour = 3600;
       worksheet.cell(xlnt::cell_reference(kColumnIndexSpent, rowIndex))
-          .value(entry.timeSpent().count() / 3600);
+          .value(entry.timeSpent().count() / kMSecsPerHour);
       worksheet.cell(xlnt::cell_reference(kColumnIndexLabel, rowIndex))
           .value(calculateLabel(issue.summary()));
       worksheet.cell(xlnt::cell_reference(kColumnIndexProject, rowIndex))
@@ -136,33 +135,29 @@ void addWorklogToWorksheet(xlnt::worksheet &worksheet,
   addWorklogSummaryToWorksheet(worksheet, worklog, rowIndex);
 }
 
-void addTimeSheetsToReport(
-    xlnt::workbook &workbook,
-    std::vector<std::reference_wrapper<jwlrep::UserTimeSheet>> const
-        &timeSheets,
-    jwlrep::Options const &options) {
+void addTimeSheetsToReport(xlnt::workbook &workbook,
+                           jwlrep::TimeSheets const &timeSheets,
+                           jwlrep::Options const &options) {
   for (auto const &userTimeSheetRef : timeSheets) {
-    if (userTimeSheetRef.get().worklog().empty() ||
-        userTimeSheetRef.get().worklog()[0].entries().empty()) {
-      SPDLOG_INFO("No data to save to the report");
+    if (userTimeSheetRef.worklog().empty() ||
+        userTimeSheetRef.worklog()[0].entries().empty()) {
+      LOG_INFO("No data to save to the report");
       continue;
     }
 
     auto worksheet = workbook.create_sheet();
-    worksheet.title(userTimeSheetRef.get().worklog()[0].entries()[0].author());
+    worksheet.title(userTimeSheetRef.worklog()[0].entries()[0].author());
 
     addHeadingToReport(worksheet);
-    addWorklogToWorksheet(worksheet, userTimeSheetRef.get().worklog(), options);
+    addWorklogToWorksheet(worksheet, userTimeSheetRef.worklog(), options);
   }
 }
 
-} // namespace
+}  // namespace
 
 namespace jwlrep {
 
-void createReportExcel(
-    std::vector<std::reference_wrapper<UserTimeSheet>> const &timeSheets,
-    Options const &options) {
+void createReportExcel(TimeSheets const &timeSheets, Options const &options) {
   xlnt::workbook workbook;
   workbook.active_sheet().title("Summary");
 
@@ -171,4 +166,4 @@ void createReportExcel(
   workbook.save("report.xlsx");
 }
 
-} // namespace jwlrep
+}  // namespace jwlrep

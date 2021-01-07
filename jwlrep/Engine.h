@@ -4,13 +4,12 @@
 
 #pragma once
 
-#include <jwlrep/IEngineEventHandler.h>
-
 #include <jwlrep/AppConfig.h>
+#include <jwlrep/IEngineEventHandler.h>
+#include <jwlrep/Worklog.h>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/beast/ssl.hpp>
-#include <boost/fiber/buffered_channel.hpp>
 
 namespace jwlrep {
 
@@ -23,14 +22,8 @@ class Engine final {
                   IEngineEventHandler& engineEventHandler,
                   AppConfig const& appConfig);
 
-  Engine& operator=(Engine const&) = delete;
+  auto operator=(Engine const&) -> Engine& = delete;
   Engine(Engine const&) = delete;
-
-  /**
-   * Destroy Engine instance. Mark Engine as stopped. Don't perform actual
-   * shutdown.
-   */
-  ~Engine();
 
   /**
    * Start Engine. Non-blocking call. Actual startup will be performed
@@ -43,16 +36,10 @@ class Engine final {
    */
   void stop();
 
-  /**
-   * Init Engine. Blocking call.
-   * @return True if initiated and ready to go. False otherwise.
-   */
-  bool init();
-
  private:
-  void queryTimesheets();
+  auto loadTimesheets() -> Expected<TimeSheets>;
 
-  bool initiated_ = false;
+  void generateTimesheetsXSLTReport(TimeSheets const& timeSheets);
 
   std::shared_ptr<boost::asio::io_context> ioContext_;
 
@@ -61,8 +48,6 @@ class Engine final {
   IEngineEventHandler& engineEventHandler_;
 
   AppConfig const& appConfig_;
-
-  std::unique_ptr<boost::fibers::buffered_channel<int>> channel_;
 };
 
-} // namespace jwlrep
+}  // namespace jwlrep

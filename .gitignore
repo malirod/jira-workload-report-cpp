@@ -42,3 +42,5 @@ tags
 test_detail.xml
 
 debug.log
+compile_commands.json
+.cache

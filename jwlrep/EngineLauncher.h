@@ -11,7 +11,6 @@
 #include <jwlrep/SignalHandler.h>
 
 #include <boost/asio/io_context.hpp>
-
 #include <memory>
 
 namespace jwlrep {
@@ -29,21 +28,21 @@ class EngineLauncher final : public IEngineEventHandler {
 
   EngineLauncher(EngineLauncher const&) = delete;
   EngineLauncher(EngineLauncher const&&) = delete;
-  EngineLauncher& operator=(EngineLauncher const&) = delete;
-  EngineLauncher& operator=(EngineLauncher const&&) = delete;
+  auto operator=(EngineLauncher const&) -> EngineLauncher& = delete;
+  auto operator=(EngineLauncher const&&) -> EngineLauncher& = delete;
 
   /**
    * Setup environment, run Engine and wait until it will finish.
    * @return Execution result.
    */
-  std::error_code run();
+  auto run() -> std::error_code;
 
  private:
-  std::error_code init();
+  auto init() -> std::error_code;
 
   void deInit();
 
-  std::error_code doRun();
+  auto doRun() -> std::error_code;
 
   void onTerminationRequest();
 
@@ -63,4 +62,4 @@ class EngineLauncher final : public IEngineEventHandler {
   std::shared_ptr<boost::asio::io_context> ioContext_;
 };
 
-} // namespace jwlrep
+}  // namespace jwlrep

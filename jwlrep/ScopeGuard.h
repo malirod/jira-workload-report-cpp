@@ -19,18 +19,15 @@ class ScopeGuard {
    * @param cleanupAction action to be performed when going out of scope.
    */
   explicit ScopeGuard(Fn&& cleanupAction)
-      : cleanupAction_(std::forward<Fn>(cleanupAction)) {
-  }
+      : cleanupAction_(std::forward<Fn>(cleanupAction)) {}
 
   /**
    * Destroy object and call cleanup action..
    */
-  ~ScopeGuard() {
-    cleanupAction_();
-  }
+  ~ScopeGuard() { cleanupAction_(); }
 
  private:
   Fn cleanupAction_;
 };
 
-} // namespace jwlrep
+}  // namespace jwlrep

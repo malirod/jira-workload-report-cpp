@@ -24,9 +24,8 @@ constexpr inline auto ToIntegral(E e) noexcept ->
 }
 
 template <typename E, typename T>
-constexpr inline typename std::
-    enable_if<std::is_enum<E>::value && std::is_integral<T>::value, E>::type
-    FromIntegral(T value) noexcept {
+constexpr inline auto FromIntegral(T value) noexcept -> typename std::enable_if<
+    std::is_enum<E>::value && std::is_integral<T>::value, E>::type {
   return static_cast<E>(value);
 }
 
@@ -47,12 +46,12 @@ constexpr inline typename std::
 #endif
 
 template <typename T>
-struct Storage {
+struct Storage {  // NOLINT
   template <typename... ArgTypes>
   // cppcheck-suppress noExplicitConstructor
-  Storage(ArgTypes... args) // NOLINT(runtime/explicit)
+  Storage(ArgTypes... args)  // NOLINT
       : size(sizeof...(ArgTypes)) {
-    static const char* static_data[sizeof...(ArgTypes)] = {args...};
+    static const char* static_data[sizeof...(ArgTypes)] = {args...};  // NOLINT
     data = static_data;
   }
 
@@ -65,27 +64,25 @@ struct Storage {
 template <typename T>
 struct EnumStrings {
   using DataType = Storage<T>;
-  static DataType data;
+  static DataType data;  // NOLINT
 };
 
 template <typename T>
 struct EnumRefHolder {
-  T& enum_value;
-  explicit EnumRefHolder(T& enum_value) : enum_value(enum_value) {
-  }
+  T& enum_value;  // NOLINT
+  explicit EnumRefHolder(T& enum_value) : enum_value(enum_value) {}
 };
 
 template <typename T>
 struct EnumConstRefHolder {
-  T const& enum_value;
-  explicit EnumConstRefHolder(T const& enum_value) : enum_value(enum_value) {
-  }
+  T const& enum_value;  // NOLINT
+  explicit EnumConstRefHolder(T const& enum_value) : enum_value(enum_value) {}
 };
 
 // Actual enum to string conversion
 template <typename T>
-std::ostream& operator<<(std::ostream& stream,
-                         EnumConstRefHolder<T> const& data) {
+auto operator<<(std::ostream& stream, EnumConstRefHolder<T> const& data)
+    -> std::ostream& {
   auto const index = ToIntegral(data.enum_value);
   auto const data_size = EnumStrings<T>::data.size;
   if (index >= 0 && index < data_size) {
@@ -96,7 +93,8 @@ std::ostream& operator<<(std::ostream& stream,
 
 // Actual enum from string conversion
 template <typename T>
-std::istream& operator>>(std::istream& stream, EnumRefHolder<T> const& data) {
+auto operator>>(std::istream& stream, EnumRefHolder<T> const& data)
+    -> std::istream& {
   std::string value;
   stream >> value;
 
@@ -115,17 +113,17 @@ std::istream& operator>>(std::istream& stream, EnumRefHolder<T> const& data) {
 // use the ability of function to deuce their template type without
 // being explicitly told to create the correct type of enumRefHolder<T>
 template <typename T>
-EnumConstRefHolder<T> EnumToStream(T const& e) {
+auto EnumToStream(T const& e) -> EnumConstRefHolder<T> {
   return EnumConstRefHolder<T>(e);
 }
 
 template <typename T>
-EnumRefHolder<T> EnumFromStream(T& e) {
+auto EnumFromStream(T& e) -> EnumRefHolder<T> {
   return EnumRefHolder<T>(e);
 }
 
 template <typename T>
-char const* EnumToChars(T const& e) {
+auto EnumToChars(T const& e) -> char const* {
   auto const index = ToIntegral(e);
   auto const dataSize = EnumStrings<T>::data.size;
   if (index >= 0 && index < dataSize) {
@@ -139,16 +137,16 @@ char const* EnumToChars(T const& e) {
 #endif
 
 template <typename T>
-std::string EnumToString(T const& e) {
+auto EnumToString(T const& e) -> std::string {
   return std::string(EnumToChars<T>(e));
 }
 
 // http://stackoverflow.com/questions/18837857/cant-use-enum-class-as-unordered-map-key
 struct EnumClassHash {
   template <typename T>
-  std::size_t operator()(T t) const {
+  auto operator()(T t) const -> std::size_t {
     return static_cast<std::size_t>(t);
   }
 };
 
-} // namespace jwlrep
+}  // namespace jwlrep

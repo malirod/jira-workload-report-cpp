@@ -8,20 +8,21 @@
 
 namespace {
 
-std::string base64Encode(std::uint8_t const* data, std::size_t length) {
+auto base64Encode(std::uint8_t const* data, std::size_t length) -> std::string {
   std::string result;
   result.resize(boost::beast::detail::base64::encoded_size(length));
   result.resize(boost::beast::detail::base64::encode(&result[0], data, length));
   return result;
 }
 
-} // namespace
+}  // namespace
 
 namespace jwlrep {
 
-std::string base64Encode(std::string_view dataView) {
+auto base64Encode(std::string_view dataView) -> std::string {
+  // NOLINTNEXTLINE
   return ::base64Encode(reinterpret_cast<std::uint8_t const*>(dataView.data()),
                         dataView.size());
 }
 
-} // namespace jwlrep
+}  // namespace jwlrep

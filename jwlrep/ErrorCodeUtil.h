@@ -9,6 +9,6 @@
 
 namespace jwlrep {
 
-std::error_code toStd(boost::system::error_code const& errorCode);
+auto toStd(boost::system::error_code const& errorCode) -> std::error_code;
 
-} // namespace jwlrep
+}  // namespace jwlrep

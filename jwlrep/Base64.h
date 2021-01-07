@@ -10,4 +10,4 @@ namespace jwlrep {
 
 std::string base64Encode(std::string_view dataView);
 
-} // namespace jwlrep
+}  // namespace jwlrep

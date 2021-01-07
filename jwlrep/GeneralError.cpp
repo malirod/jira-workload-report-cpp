@@ -9,29 +9,25 @@ namespace jwlrep {
 
 template <>
 EnumStrings<GeneralError>::DataType EnumStrings<GeneralError>::data = {
-    "Success",
-    "Internal error",
-    "Wrong startup parameter(s)",
-    "Invalid AppConfig",
-    "Startup has failed",
-    "Operation interrupted",
-    "System error"};
+    "Success",           "Internal error",     "Wrong startup parameter(s)",
+    "Invalid AppConfig", "Startup has failed", "Operation interrupted",
+    "System error",      "Network error"};
 
-const std::error_category& detail::ErrorCategory::get() {
+auto detail::ErrorCategory::get() -> const std::error_category& {
   static ErrorCategory instance;
   return instance;
 }
 
-std::error_code make_error_code(GeneralError error) noexcept {
+auto make_error_code(GeneralError error) noexcept -> std::error_code {
   return {ToIntegral(error), detail::ErrorCategory::get()};
 }
 
-const char* detail::ErrorCategory::name() const noexcept {
+auto detail::ErrorCategory::name() const noexcept -> const char* {
   return "GeneralError";
 }
 
-std::string detail::ErrorCategory::message(int error_value) const {
+auto detail::ErrorCategory::message(int error_value) const -> std::string {
   return EnumToString(FromIntegral<GeneralError>(error_value));
 }
 
-} // namespace jwlrep
+}  // namespace jwlrep

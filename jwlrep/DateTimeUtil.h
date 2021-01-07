@@ -8,7 +8,7 @@
 
 namespace jwlrep {
 
-boost::posix_time::ptime dateTimeFromMSecSinceEpoch(
-    boost::posix_time::milliseconds msec);
+auto dateTimeFromMSecSinceEpoch(boost::posix_time::milliseconds msec)
+    -> boost::posix_time::ptime;
 
-} // namespace jwlrep
+}  // namespace jwlrep

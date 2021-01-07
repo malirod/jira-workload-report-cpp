@@ -14,4 +14,4 @@ struct IEngineEventHandler {
   virtual void onEngineStopped() = 0;
 };
 
-} // namespace jwlrep
+}  // namespace jwlrep

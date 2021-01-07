@@ -6,10 +6,10 @@
 
 namespace jwlrep {
 
-std::filesystem::path getExePath(char const* const argv0) {
+auto getExePath(char const* const argv0) -> std::filesystem::path {
   auto exePath =
       std::filesystem::weakly_canonical(std::filesystem::path(argv0));
   return exePath;
 }
 
-} // namespace jwlrep
+}  // namespace jwlrep
