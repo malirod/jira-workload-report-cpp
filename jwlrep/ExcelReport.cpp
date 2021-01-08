@@ -23,9 +23,9 @@ std::size_t const kColumnIndexProject = 7U;
 std::size_t const kColumnIndexCommon = 8U;
 std::size_t const kColumnIndexArch = 9U;
 
-char const *const kHeaderProject = "Project (h)";
+char const *const kHeaderProject = "SOP (h)";
 char const *const kHeaderCommon = "Common (h)";
-char const *const kHeaderArch = "Arch (h)";
+char const *const kHeaderArch = "Non-SOP (h)";
 
 void addHeadingToReport(xlnt::worksheet &worksheet) {
   worksheet.cell(xlnt::cell_reference(kColumnIndexKey, kHeaderRow))
@@ -46,28 +46,6 @@ void addHeadingToReport(xlnt::worksheet &worksheet) {
       .value(kHeaderCommon);
   worksheet.cell(xlnt::cell_reference(kColumnIndexArch, kHeaderRow))
       .value(kHeaderArch);
-}
-
-auto calculateLabel(std::string const &summary) -> std::string {
-  using boost::algorithm::contains;
-  using boost::algorithm::to_lower_copy;
-
-  if (contains(to_lower_copy(summary), "[common]")) {
-    return "Common";
-  }
-  if (contains(to_lower_copy(summary), "[arch]")) {
-    return "Arch";
-  }
-  if (contains(to_lower_copy(summary), "overtime")) {
-    return "Overtime";
-  }
-  if (contains(to_lower_copy(summary), "vacation")) {
-    return "Vacation";
-  }
-  if (contains(to_lower_copy(summary), "Sick leaves")) {
-    return "Sick leaves";
-  }
-  return "2520";
 }
 
 void addWorklogSummaryToWorksheet(xlnt::worksheet &worksheet,
@@ -106,7 +84,7 @@ void addWorklogSummaryToWorksheet(xlnt::worksheet &worksheet,
 
 void addWorklogToWorksheet(xlnt::worksheet &worksheet,
                            std::vector<jwlrep::Worklog> const &worklog,
-                           jwlrep::Options const & /*unused*/) {
+                           jwlrep::Options const &options) {
   std::uint32_t rowIndex = kHeaderRow + 1U;
   for (auto const &issue : worklog) {
     for (auto const &entry : issue.entries()) {
@@ -122,13 +100,13 @@ void addWorklogToWorksheet(xlnt::worksheet &worksheet,
       worksheet.cell(xlnt::cell_reference(kColumnIndexSpent, rowIndex))
           .value(entry.timeSpent().count() / kMSecsPerHour);
       worksheet.cell(xlnt::cell_reference(kColumnIndexLabel, rowIndex))
-          .value(calculateLabel(issue.summary()));
+          .value(calculateLabel(issue.summary(), options));
       worksheet.cell(xlnt::cell_reference(kColumnIndexProject, rowIndex))
-          .formula(fmt::format("=IF(F{0}=\"2520\",E{0},0)", rowIndex + 1));
+          .formula(fmt::format("=IF(F{0}=\"SOP\",E{0},0)", rowIndex + 1));
       worksheet.cell(xlnt::cell_reference(kColumnIndexCommon, rowIndex))
           .formula(fmt::format("=IF(F{0}=\"Common\",E{0},0)", rowIndex + 1));
       worksheet.cell(xlnt::cell_reference(kColumnIndexArch, rowIndex))
-          .formula(fmt::format("=IF(F{0}=\"Arch\",E{0},0)", rowIndex + 1));
+          .formula(fmt::format("=IF(F{0}=\"Non-SOP\",E{0},0)", rowIndex + 1));
       ++rowIndex;
     }
   }
@@ -164,6 +142,21 @@ void createReportExcel(TimeSheets const &timeSheets, Options const &options) {
   addTimeSheetsToReport(workbook, timeSheets, options);
 
   workbook.save("report.xlsx");
+}
+
+auto calculateLabel(std::string const &summary, Options const &options)
+    -> std::string {
+  using boost::algorithm::contains;
+  using boost::algorithm::to_lower_copy;
+
+  for (auto const &[key, value] : options.associations()) {
+    // Assume key is already normalized during load
+    if (contains(to_lower_copy(summary), key)) {
+      return value;
+    }
+  }
+
+  return options.defaultAssociation();
 }
 
 }  // namespace jwlrep

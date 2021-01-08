@@ -8,11 +8,14 @@
 #include <jwlrep/PathUtil.h>
 #include <jwlrep/Version.h>
 
+#include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
 #include <boost/program_options.hpp>
 #include <fstream>
 #include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
+
+#include "boost/algorithm/string/case_conv.hpp"
 
 namespace nlohmann {
 template <>
@@ -28,10 +31,19 @@ struct adl_serializer<jwlrep::Credentials> {
 template <>
 struct adl_serializer<jwlrep::Options> {
   static auto from_json(json const& json) -> jwlrep::Options {
+    boost::container::flat_map<std::string, std::string> associations;
+    associations.reserve(json["associations"].size());
+
+    for (auto const& [key, value] : json["associations"].items()) {
+      // Make normalization of the Key
+      associations.emplace(boost::algorithm::to_lower_copy(key), value);
+    }
+
     return jwlrep::Options{
         boost::gregorian::from_string(json["dateStart"].get<std::string>()),
         boost::gregorian::from_string(json["dateEnd"].get<std::string>()),
-        json["users"].get<std::vector<std::string>>()};
+        json["users"].get<std::vector<std::string>>(),
+        json["defaultAssociation"].get<std::string>(), std::move(associations)};
     ;
   }
 };
@@ -57,9 +69,10 @@ auto isJsonValid(nlohmann::json const& jsonAppConfigJson) -> bool {
     "properties": {
         "credentials": {
             "type": "object",
+            "additionalProperties": false,
             "properties": {"server": {"type": "string"},
                            "userName": {"type": "string"},
-                           "userName": {"password": "string"}
+                           "password": {"password": "string"}
                           },
             "required": [
                  "server",
@@ -69,14 +82,19 @@ auto isJsonValid(nlohmann::json const& jsonAppConfigJson) -> bool {
         },
         "options": {
             "type": "object",
+            "additionalProperties": false,
             "properties": {"dateStart": {"type": "string", "format": "date"},
                            "dateEnd": {"type": "string", "format": "date"},
-                           "users": {"type": "array", "items": {"type": "string"}}
+                           "users": {"type": "array", "items": {"type": "string"}},
+                           "defaultAssociation": {"type": "string"},
+                           "associations": {"type": "object", "additionalProperties": { "type": "string" }}
                           },
             "required": [
                  "dateStart",
                  "dateEnd",
-                 "users"
+                 "users",
+                 "defaultAssociation",
+                 "associations"
                  ]
         }
     },
@@ -201,10 +219,15 @@ auto Credentials::userName() const -> std::string const& { return userName_; }
 
 auto Credentials::password() const -> std::string const& { return password_; }
 
-Options::Options(boost::gregorian::date dateStart,
-                 boost::gregorian::date dateEnd,
-                 std::vector<std::string>&& users)
-    : dateStart_(dateStart), dateEnd_(dateEnd), users_(std::move(users)) {}
+Options::Options(
+    boost::gregorian::date dateStart, boost::gregorian::date dateEnd,
+    std::vector<std::string>&& users, std::string defaultAssociation,
+    boost::container::flat_map<std::string, std::string>&& associations)
+    : dateStart_(dateStart),
+      dateEnd_(dateEnd),
+      users_(std::move(users)),
+      defaultAssociation_(std::move(defaultAssociation)),
+      associations_(std::move(associations)) {}
 
 auto Options::dateStart() const -> boost::gregorian::date const& {
   return dateStart_;
@@ -216,6 +239,15 @@ auto Options::dateEnd() const -> boost::gregorian::date const& {
 
 auto Options::users() const -> std::vector<std::string> const& {
   return users_;
+}
+
+auto Options::defaultAssociation() const -> std::string const& {
+  return defaultAssociation_;
+}
+
+auto Options::associations() const
+    -> boost::container::flat_map<std::string, std::string> const& {
+  return associations_;
 }
 
 AppConfig::AppConfig(Credentials&& credentials, Options&& options)

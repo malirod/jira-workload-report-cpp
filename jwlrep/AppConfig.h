@@ -6,6 +6,7 @@
 
 #include <jwlrep/Outcome.h>
 
+#include <boost/container/flat_map.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <string>
 #include <vector>
@@ -33,7 +34,8 @@ class Credentials {
 class Options {
  public:
   Options(boost::gregorian::date dateStart, boost::gregorian::date dateEnd,
-          std::vector<std::string>&& users);
+          std::vector<std::string>&& users, std::string defaultAssociation,
+          boost::container::flat_map<std::string, std::string>&& associations);
 
   [[nodiscard]] auto dateStart() const -> boost::gregorian::date const&;
 
@@ -41,12 +43,21 @@ class Options {
 
   [[nodiscard]] auto users() const -> std::vector<std::string> const&;
 
+  [[nodiscard]] auto defaultAssociation() const -> std::string const&;
+
+  [[nodiscard]] auto associations() const
+      -> boost::container::flat_map<std::string, std::string> const&;
+
  private:
   boost::gregorian::date dateStart_;
 
   boost::gregorian::date dateEnd_;
 
   std::vector<std::string> users_;
+
+  std::string defaultAssociation_;
+
+  boost::container::flat_map<std::string, std::string> associations_;
 };
 
 class AppConfig {

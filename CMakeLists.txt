@@ -152,9 +152,13 @@ if(BUILD_TESTING)
   set(TEST_LIB_NAME "${LIB_NAME}_test")
 
   set(TEST_SRC_LIST
-      "jwlrep/test/AppConfigTest.cpp" "jwlrep/test/EnumUtilTest.cpp"
-      "jwlrep/test/GeneralErrorTest.cpp" "jwlrep/test/Base64Test.cpp"
-      "jwlrep/test/ErrorCodeUtilTest.cpp" "jwlrep/test/WorklogTest.cpp")
+      "jwlrep/test/AppConfigTest.cpp"
+      "jwlrep/test/EnumUtilTest.cpp"
+      "jwlrep/test/GeneralErrorTest.cpp"
+      "jwlrep/test/Base64Test.cpp"
+      "jwlrep/test/ErrorCodeUtilTest.cpp"
+      "jwlrep/test/WorklogTest.cpp"
+      "jwlrep/test/ExcelReportTest.cpp")
 
   add_library(${TEST_LIB_NAME} OBJECT ${TEST_SRC_LIST})
   add_library(jwlrep::${TEST_LIB_NAME} ALIAS ${TEST_LIB_NAME})

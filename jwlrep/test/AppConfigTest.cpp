@@ -18,7 +18,9 @@ TEST_CASE("Valid config", "[AppConfig]") {
       "options": {
         "dateStart": "2020-11-21",
         "dateEnd": "2020-12-23",
-        "users": ["User1", "User2"]
+        "users": ["User1", "User2"],
+        "defaultAssociation": "SOP",
+        "associations": {"[Common]": "Common", "[Arch]": "Non-SOP"}
       }
     }
   )";
@@ -31,6 +33,41 @@ TEST_CASE("Valid config", "[AppConfig]") {
   REQUIRE(appConfigOrError.value().options().dateEnd().year() == 2020);
   REQUIRE(appConfigOrError.value().options().dateEnd().month() == 12);
   REQUIRE(appConfigOrError.value().options().dateEnd().day() == 23);
+  REQUIRE(appConfigOrError.value().options().defaultAssociation() == "SOP");
+  REQUIRE(appConfigOrError.value().options().associations().size() == 2);
+}
+
+TEST_CASE("Associations keys are normalized during load", "[AppConfig]") {
+  const auto *const config = R"(
+    {
+      "credentials": {
+        "server":"my.server.com",
+        "userName":"LOGIN",
+        "password":"PASSWORD"
+      },
+      "options": {
+        "dateStart": "2020-11-21",
+        "dateEnd": "2020-12-23",
+        "users": ["User1", "User2"],
+        "defaultAssociation": "SOP",
+        "associations": {"[Common]": "Common", "[Arch]": "Non-SOP"}
+      }
+    }
+  )";
+
+  auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
+  REQUIRE(appConfigOrError.has_value());
+  REQUIRE(appConfigOrError.value().options().associations().size() == 2);
+  REQUIRE(appConfigOrError.value()
+              .options()
+              .associations()
+              .find("[common]")
+              ->second == "Common");
+  REQUIRE(appConfigOrError.value()
+              .options()
+              .associations()
+              .find("[arch]")
+              ->second == "Non-SOP");
 }
 
 TEST_CASE("Invalid config. Bad Json.", "[AppConfig]") {
@@ -43,7 +80,9 @@ TEST_CASE("Invalid config. Bad Json.", "[AppConfig]") {
       "options": {
         "dateStart": "2020-11-21",
         "dateEnd": "2020-11-23",
-        "users": ["User1", "User2"]
+        "users": ["User1", "User2"],
+        "defaultAssociation": "SOP",
+        "associations": {"[Common]": "Common", "[Arch]": "Non-SOP"}
       }
     }
   )";
@@ -62,7 +101,9 @@ TEST_CASE("Invalid config. Missing server.", "[AppConfig]") {
       "options": {
         "dateStart": "2020-11-21",
         "dateEnd": "2020-11-23",
-        "users": ["User1", "User2"]
+        "users": ["User1", "User2"],
+        "defaultAssociation": "SOP",
+        "associations": {"[Common]": "Common", "[Arch]": "Non-SOP"}
       }
     }
   )";
@@ -81,7 +122,9 @@ TEST_CASE("Invalid config. Missing userName.", "[AppConfig]") {
       "options": {
         "dateStart": "2020-11-21",
         "dateEnd": "2020-11-23",
-        "users": ["User1", "User2"]
+        "users": ["User1", "User2"],
+        "defaultAssociation": "SOP",
+        "associations": {"[Common]": "Common", "[Arch]": "Non-SOP"}
       }
     }
   )";
@@ -100,7 +143,9 @@ TEST_CASE("Invalid config. Missing password.", "[AppConfig]") {
       "options": {
         "dateStart": "2020-11-21",
         "dateEnd": "2020-11-23",
-        "users": ["User1", "User2"]
+        "users": ["User1", "User2"],
+        "defaultAssociation": "SOP",
+        "associations": {"[Common]": "Common", "[Arch]": "Non-SOP"}
       }
     }
   )";
@@ -119,7 +164,9 @@ TEST_CASE("Invalid config. Missing dateStart.", "[AppConfig]") {
       },
       "options": {
         "dateEnd": "2020-11-23",
-        "users": ["User1", "User2"]
+        "users": ["User1", "User2"],
+        "defaultAssociation": "SOP",
+        "associations": {"[Common]": "Common", "[Arch]": "Non-SOP"}
       }
     }
   )";
@@ -138,7 +185,9 @@ TEST_CASE("Invalid config. Missing dateEnd.", "[AppConfig]") {
       },
       "options": {
         "dateStart: "2020-11-21",
-        "users": ["User1", "User2"]
+        "users": ["User1", "User2"],
+        "defaultAssociation": "SOP",
+        "associations": {"[Common]": "Common", "[Arch]": "Non-SOP"}
       }
     }
   )";
@@ -157,7 +206,9 @@ TEST_CASE("Invalid config. Missing users.", "[AppConfig]") {
       },
       "options": {
         "dateStart": "2020-11-21",
-        "dateEnd": "2020-11-23"
+        "dateEnd": "2020-11-23",
+        "defaultAssociation": "SOP",
+        "associations": {"[Common]": "Common", "[Arch]": "Non-SOP"}
       }
     }
   )";
@@ -177,7 +228,9 @@ TEST_CASE("Invalid config. DateStart wrong format", "[AppConfig]") {
       "options": {
         "dateStart": "2020-Nov-21",
         "dateEnd": "2020-11-23",
-        "users": ["User1", "User2"]
+        "users": ["User1", "User2"],
+        "defaultAssociation": "SOP",
+        "associations": {"[Common]": "Common", "[Arch]": "Non-SOP"}
       }
     }
   )";
@@ -197,7 +250,9 @@ TEST_CASE("Invalid config. DateEnd wrong format", "[AppConfig]") {
       "options": {
         "dateStart": "2020-11-21",
         "dateEnd": "2020-Nov-23",
-        "users": ["User1", "User2"]
+        "users": ["User1", "User2"],
+        "defaultAssociation": "SOP",
+        "associations": {"[Common]": "Common", "[Arch]": "Non-SOP"}
       }
     }
   )";

@@ -12,4 +12,7 @@ class Options;
 
 void createReportExcel(TimeSheets const& timeSheets, Options const& options);
 
+auto calculateLabel(std::string const& summary, jwlrep::Options const& options)
+    -> std::string;
+
 }  // namespace jwlrep
