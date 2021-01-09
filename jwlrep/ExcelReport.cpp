@@ -96,17 +96,17 @@ void addWorklogToWorksheet(xlnt::worksheet &worksheet,
           .value(entry.author());
       worksheet.cell(xlnt::cell_reference(kColumnIndexDate, rowIndex))
           .value(boost::gregorian::to_iso_extended_string(entry.created()));
-      auto const kMSecsPerHour = 3600;
+      auto const kMSecsPerHour = 3600.0;
       worksheet.cell(xlnt::cell_reference(kColumnIndexSpent, rowIndex))
           .value(entry.timeSpent().count() / kMSecsPerHour);
       worksheet.cell(xlnt::cell_reference(kColumnIndexLabel, rowIndex))
           .value(calculateLabel(issue.summary(), options));
       worksheet.cell(xlnt::cell_reference(kColumnIndexProject, rowIndex))
-          .formula(fmt::format("=IF(F{0}=\"SOP\",E{0},0)", rowIndex + 1));
+          .formula(fmt::format("=IF(F{0}=\"SOP\",E{0},0)", rowIndex));
       worksheet.cell(xlnt::cell_reference(kColumnIndexCommon, rowIndex))
-          .formula(fmt::format("=IF(F{0}=\"Common\",E{0},0)", rowIndex + 1));
+          .formula(fmt::format("=IF(F{0}=\"Common\",E{0},0)", rowIndex));
       worksheet.cell(xlnt::cell_reference(kColumnIndexArch, rowIndex))
-          .formula(fmt::format("=IF(F{0}=\"Non-SOP\",E{0},0)", rowIndex + 1));
+          .formula(fmt::format("=IF(F{0}=\"Non-SOP\",E{0},0)", rowIndex));
       ++rowIndex;
     }
   }
