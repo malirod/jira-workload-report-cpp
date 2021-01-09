@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: MIT
+
+// Copyright (C) 2020 Malinovsky Rodion (rodionmalino@gmail.com)
+
+#pragma once
+
+namespace jwlrep {
+
+// clang-format off
+char const* const kProjectVersion = "@PROJECT_VERSION@";
+
+unsigned int const kMajor = @PROJECT_VERSION_MAJOR@;
+unsigned int const kMinor = @PROJECT_VERSION_MINOR@;
+unsigned int const kPatch = @PROJECT_VERSION_PATCH@;
+
+// clang-format on
+
+}  // namespace jwlrep

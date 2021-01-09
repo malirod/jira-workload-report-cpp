@@ -23,7 +23,7 @@ auto main(int argc, char** argv) -> int {
   try {
     jwlrep::setupLogger(argc, argv);
 
-    LOG_DEBUG("Starting app ver {}", jwlrep::getVersion());
+    LOG_DEBUG("Starting app ver {}", jwlrep::kProjectVersion);
 
     auto const appConfigOrError = jwlrep::processCmdArgs(argc, argv);
     if (!appConfigOrError) {

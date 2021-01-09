@@ -56,9 +56,12 @@ find_package(OpenSSL REQUIRED)
 find_package(xlnt REQUIRED)
 find_package(magic_enum CONFIG REQUIRED)
 
+configure_file(config/Version.h.in jwlrep/Version.h)
+
 # Project lib configuration
 set(LIB_NAME jwlreplib)
 set(LIB_SRC_LIST
+    ${CMAKE_CURRENT_BINARY_DIR}/jwlrep/Version.h
     "jwlrep/GeneralError.h"
     "jwlrep/GeneralError.cpp"
     "jwlrep/Engine.h"
@@ -67,8 +70,6 @@ set(LIB_SRC_LIST
     "jwlrep/EngineLauncher.cpp"
     "jwlrep/AppConfig.h"
     "jwlrep/AppConfig.cpp"
-    "jwlrep/Version.h"
-    "jwlrep/Version.cpp"
     "jwlrep/PathUtil.h"
     "jwlrep/PathUtil.cpp"
     "jwlrep/SignalHandler.h"
@@ -106,8 +107,12 @@ target_include_directories(
   ${LIB_NAME} BEFORE PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
 target_compile_features(${LIB_NAME} PRIVATE cxx_std_17)
+
 # boost fiber asio placed in the project root available
 target_include_directories(${LIB_NAME} PRIVATE "boost")
+
+# To be able to include Version.h
+target_include_directories(${LIB_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 target_link_libraries(
   ${LIB_NAME}

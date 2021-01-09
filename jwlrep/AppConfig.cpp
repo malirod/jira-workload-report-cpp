@@ -147,7 +147,7 @@ auto processCmdArgs(int argc, char** argv) -> Expected<AppConfig> {
     sstream << options;
     LOG_INFO(sstream.str());
   };
-  auto const printVersion = []() { LOG_INFO("Version: {}", getVersion()); };
+  auto const printVersion = []() { LOG_INFO("Version: {}", kProjectVersion); };
   auto const printError = [](auto const& error) {
     LOG_ERROR("Error: {}", error.what());
   };
