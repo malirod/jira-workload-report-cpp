@@ -6,7 +6,10 @@ cmake_minimum_required(VERSION 3.18)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
 
-project(jwlrep LANGUAGES CXX)
+project(
+  jwlrep
+  LANGUAGES CXX
+  VERSION "1.0.0")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -44,15 +47,14 @@ if(WIN32)
 endif()
 
 # Dependencies
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED ON)
-find_package(Boost REQUIRED COMPONENTS program_options context fiber)
+find_package(Boost REQUIRED program_options fiber)
 find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(nlohmann_json_schema_validator REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(xlnt REQUIRED)
+find_package(magic_enum CONFIG REQUIRED)
 
 # Project lib configuration
 set(LIB_NAME jwlreplib)
@@ -69,7 +71,6 @@ set(LIB_SRC_LIST
     "jwlrep/Version.cpp"
     "jwlrep/PathUtil.h"
     "jwlrep/PathUtil.cpp"
-    "jwlrep/EnumUtil.h"
     "jwlrep/SignalHandler.h"
     "jwlrep/SignalHandler.cpp"
     "jwlrep/IEngineEventHandler.h"
@@ -105,20 +106,20 @@ target_include_directories(
   ${LIB_NAME} BEFORE PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 
 target_compile_features(${LIB_NAME} PRIVATE cxx_std_17)
-target_include_directories(${LIB_NAME} PRIVATE ${Boost_INCLUDE_DIRS})
-# make boost fiber asio placed in the project root available
+# boost fiber asio placed in the project root available
 target_include_directories(${LIB_NAME} PRIVATE "boost")
 
 target_link_libraries(
   ${LIB_NAME}
   PRIVATE fmt::fmt
-          ${Boost_LIBRARIES}
+          Boost::program_options
+          Boost::fiber
           nlohmann_json::nlohmann_json
           nlohmann_json_schema_validator
-          Boost::context
           OpenSSL::SSL
           OpenSSL::Crypto
-          xlnt::xlnt)
+          xlnt::xlnt
+          magic_enum::magic_enum)
 
 if(MSVC)
   target_link_libraries(${LIB_NAME} INTERFACE Crypt32.lib)
@@ -130,7 +131,6 @@ target_link_libraries(${LIB_NAME} PUBLIC spdlog::spdlog)
 set(APP_NAME jwlrep)
 add_executable(${APP_NAME} "jwlrep/LifeCycle.cpp")
 target_compile_features(${APP_NAME} PRIVATE cxx_std_17)
-target_include_directories(${APP_NAME} PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(${APP_NAME} PRIVATE jwlrep::${LIB_NAME})
 
 # Set static linking (the value is ignored on non-MSVC compilers)
@@ -153,7 +153,7 @@ if(BUILD_TESTING)
 
   set(TEST_SRC_LIST
       "jwlrep/test/AppConfigTest.cpp"
-      "jwlrep/test/EnumUtilTest.cpp"
+      "jwlrep/test/EnumTest.cpp"
       "jwlrep/test/GeneralErrorTest.cpp"
       "jwlrep/test/Base64Test.cpp"
       "jwlrep/test/ErrorCodeUtilTest.cpp"
@@ -164,7 +164,6 @@ if(BUILD_TESTING)
   add_library(jwlrep::${TEST_LIB_NAME} ALIAS ${TEST_LIB_NAME})
 
   target_include_directories(${TEST_LIB_NAME} PRIVATE test)
-  target_include_directories(${TEST_LIB_NAME} PRIVATE ${Boost_INCLUDE_DIRS})
 
   target_compile_features(${TEST_LIB_NAME} PRIVATE cxx_std_17)
   target_link_libraries(${TEST_LIB_NAME} PUBLIC jwlrep::${LIB_NAME}

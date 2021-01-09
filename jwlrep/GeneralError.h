@@ -41,7 +41,7 @@ class ErrorCategory : public std::error_category {
    * @param error_value Error code
    * @return Error massage
    */
-  [[nodiscard]] auto message(int error_value) const -> std::string override;
+  [[nodiscard]] auto message(int errorValue) const -> std::string override;
 
   /**
    * Allows to get access to single instance of this category.

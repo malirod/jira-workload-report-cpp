@@ -7,7 +7,6 @@
 #include <jwlrep/Logger.h>
 #include <jwlrep/Worklog.h>
 
-#include <boost/optional.hpp>
 #include <nlohmann/json-schema.hpp>
 #include <nlohmann/json.hpp>
 

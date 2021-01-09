@@ -2,7 +2,6 @@
 
 // Copyright (C) 2020 Malinovsky Rodion (rodionmalino@gmail.com)
 
-#include <jwlrep/EnumUtil.h>
 #include <jwlrep/ErrorCodeUtil.h>
 
 #include <boost/asio/error.hpp>

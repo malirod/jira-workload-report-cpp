@@ -5,7 +5,6 @@
 #include <jwlrep/AppConfig.h>
 #include <jwlrep/Base64.h>
 #include <jwlrep/Engine.h>
-#include <jwlrep/EnumUtil.h>
 #include <jwlrep/ExcelReport.h>
 #include <jwlrep/IEngineEventHandler.h>
 #include <jwlrep/Logger.h>
@@ -21,6 +20,7 @@
 #include <boost/fiber/asio/round_robin.hpp>
 #include <boost/fiber/asio/yield.hpp>
 #include <cassert>
+#include <magic_enum.hpp>
 #include <utility>
 
 namespace jwlrep {
@@ -146,7 +146,7 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
       }
       if (responseOrError.value().result() != http::status::ok) {
         LOG_ERROR("Request has failed with result {}",
-                  jwlrep::ToIntegral(responseOrError.value().result()));
+                  magic_enum::enum_integer(responseOrError.value().result()));
         return;
       }
       auto userTimeSheetOrError =

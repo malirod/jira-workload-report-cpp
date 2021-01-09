@@ -4,12 +4,20 @@
     "homepage": "https://github.com/malirod/jira-workload-report-cpp",
     "description": "Gets worklog report from Jira and generates excel report with workload.",
     "dependencies": [
-        "boost",
+        "boost-algorithm",
+        "boost-asio",
+        "boost-beast",
+        "boost-container",
+        "boost-date-time",
+        "boost-fiber",
+        "boost-outcome",
+        "boost-program-options",
         "spdlog",
         "fmt",
         "nlohmann-json",
         "json-schema-validator",
         "xlnt",
-        "catch2"
+        "catch2",
+        "magic-enum"
     ]
 }
