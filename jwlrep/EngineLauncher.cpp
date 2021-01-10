@@ -63,7 +63,7 @@ auto EngineLauncher::doRun() -> std::error_code {
 
 auto EngineLauncher::run() -> std::error_code {
   const auto errorCode = init();
-  ScopeGuard const guard{[&]() { deInit(); }};
+  auto const guard = ScopeGuard{[&]() { deInit(); }};
   return errorCode ? errorCode : doRun();
 }
 

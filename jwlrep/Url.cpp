@@ -46,7 +46,7 @@ auto Url::create(std::string const& urlString) -> Expected<Url> {
     return GeneralError::WrongArg;
   }
 
-  ScopeGuard const guard{[&uri]() { uriFreeUriMembersA(&uri); }};
+  auto const guard = ScopeGuard{[&uri]() { uriFreeUriMembersA(&uri); }};
 
   auto scheme = fromRange(uri.scheme);
   auto host = fromRange(uri.hostText);

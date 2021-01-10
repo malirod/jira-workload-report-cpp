@@ -50,7 +50,7 @@ void Engine::start() {
   boost::fibers::fiber([this]() {
     LOG_DEBUG("Launched main fiber");
 
-    ScopeGuard const guard{[&]() {
+    auto const guard = ScopeGuard{[&]() {
       LOG_DEBUG("Finished main fiber");
       stop();
     }};
@@ -136,6 +136,10 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
     LOG_DEBUG("Start getting data for the user {}", user);
     boost::fibers::fiber([barrier, &makeHttpRequest, &dnsLookupResultsOrError,
                           &user, &yield, &timeSheets, this]() {
+      auto const guard = ScopeGuard{[&]() {
+        LOG_DEBUG("Request fiber has finished");
+        barrier->wait();
+      }};
       auto request = makeHttpRequest(user);
 
       auto const responseOrError =
@@ -162,18 +166,20 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
       timeSheets.emplace_back(std::move(userTimeSheetOrError.value()));
 
       LOG_DEBUG("Got data for the user {}", user);
-
-      barrier->wait();
     }).detach();
   }
 
   barrier->wait();
-  LOG_DEBUG("Got all timesheets");
+  LOG_DEBUG("All request have been finished.");
   return timeSheets;
 }
 
 void Engine::generateTimesheetsXSLTReport(TimeSheets const& timeSheets) {
   LOG_DEBUG("Generating report");
+  if (timeSheets.empty()) {
+    LOG_INFO("Timesheets are empty. Skip report generation.");
+    return;
+  }
   createReportExcel(timeSheets, appConfig_.options());
 }
 
