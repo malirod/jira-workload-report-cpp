@@ -20,7 +20,8 @@ enum class GeneralError {
   StartupFailed,
   Interrupted,
   SystemError,
-  NetworkError
+  NetworkError,
+  WrongArg
 };
 
 namespace detail {

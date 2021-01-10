@@ -18,6 +18,7 @@
         "json-schema-validator",
         "xlnt",
         "catch2",
-        "magic-enum"
+        "magic-enum",
+        "uriparser"
     ]
 }

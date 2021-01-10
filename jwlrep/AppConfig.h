@@ -5,6 +5,7 @@
 #pragma once
 
 #include <jwlrep/Outcome.h>
+#include <jwlrep/Url.h>
 
 #include <boost/container/flat_map.hpp>
 #include <boost/date_time/gregorian/gregorian.hpp>
@@ -15,16 +16,16 @@ namespace jwlrep {
 
 class Credentials {
  public:
-  Credentials(std::string server, std::string userName, std::string password);
+  Credentials(Url serverUrl, std::string userName, std::string password);
 
-  [[nodiscard]] auto server() const -> std::string const&;
+  [[nodiscard]] auto serverUrl() const -> Url const&;
 
   [[nodiscard]] auto userName() const -> std::string const&;
 
   [[nodiscard]] auto password() const -> std::string const&;
 
  private:
-  std::string server_;
+  Url serverUrl_;
 
   std::string userName_;
 

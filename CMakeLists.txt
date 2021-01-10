@@ -55,6 +55,7 @@ find_package(nlohmann_json_schema_validator REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(xlnt REQUIRED)
 find_package(magic_enum CONFIG REQUIRED)
+find_package(uriparser CONFIG REQUIRED)
 
 configure_file(config/Version.h.in jwlrep/Version.h)
 
@@ -92,7 +93,9 @@ set(LIB_SRC_LIST
     "jwlrep/DateTimeUtil.cpp"
     "jwlrep/ExcelReport.h"
     "jwlrep/ExcelReport.cpp"
-    "jwlrep/FiberUtil.h")
+    "jwlrep/FiberUtil.h"
+    "jwlrep/Url.cpp"
+    "jwlrep/Url.h")
 
 add_library(${LIB_NAME} ${LIB_SRC_LIST})
 add_library(jwlrep::${LIB_NAME} ALIAS ${LIB_NAME})
@@ -124,7 +127,8 @@ target_link_libraries(
           OpenSSL::SSL
           OpenSSL::Crypto
           xlnt::xlnt
-          magic_enum::magic_enum)
+          magic_enum::magic_enum
+          uriparser::uriparser)
 
 if(MSVC)
   target_link_libraries(${LIB_NAME} INTERFACE Crypt32.lib)
@@ -163,7 +167,8 @@ if(BUILD_TESTING)
       "jwlrep/test/Base64Test.cpp"
       "jwlrep/test/ErrorCodeUtilTest.cpp"
       "jwlrep/test/WorklogTest.cpp"
-      "jwlrep/test/ExcelReportTest.cpp")
+      "jwlrep/test/ExcelReportTest.cpp"
+      "jwlrep/test/UrlTest.cpp")
 
   add_library(${TEST_LIB_NAME} OBJECT ${TEST_SRC_LIST})
   add_library(jwlrep::${TEST_LIB_NAME} ALIAS ${TEST_LIB_NAME})

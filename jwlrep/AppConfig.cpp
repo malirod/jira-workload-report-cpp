@@ -6,6 +6,7 @@
 #include <jwlrep/GeneralError.h>
 #include <jwlrep/Logger.h>
 #include <jwlrep/PathUtil.h>
+#include <jwlrep/Url.h>
 #include <jwlrep/Version.h>
 
 #include <boost/algorithm/string.hpp>
@@ -21,7 +22,12 @@ namespace nlohmann {
 template <>
 struct adl_serializer<jwlrep::Credentials> {
   static auto from_json(json const& json) -> jwlrep::Credentials {
-    return jwlrep::Credentials{json["server"].get<std::string>(),
+    auto const& serverUrlStr = json["serverUrl"].get<std::string>();
+    auto serverUrlOrError = jwlrep::Url::create(serverUrlStr);
+    if (!serverUrlOrError) {
+      throw std::runtime_error(fmt::format("Bad Url: '{}'", serverUrlStr));
+    }
+    return jwlrep::Credentials{std::move(serverUrlOrError.value()),
                                json["userName"].get<std::string>(),
                                json["password"].get<std::string>()};
     ;
@@ -70,12 +76,12 @@ auto isJsonValid(nlohmann::json const& jsonAppConfigJson) -> bool {
         "credentials": {
             "type": "object",
             "additionalProperties": false,
-            "properties": {"server": {"type": "string"},
+            "properties": {"serverUrl": {"type": "string"},
                            "userName": {"type": "string"},
                            "password": {"password": "string"}
                           },
             "required": [
-                 "server",
+                 "serverUrl",
                  "userName",
                  "password"
                  ]
@@ -207,13 +213,13 @@ auto processCmdArgs(int argc, char** argv) -> Expected<AppConfig> {
   }
 }
 
-Credentials::Credentials(std::string server, std::string userName,
+Credentials::Credentials(Url serverUrl, std::string userName,
                          std::string password)
-    : server_(std::move(server)),
+    : serverUrl_(std::move(serverUrl)),
       userName_(std::move(userName)),
       password_(std::move(password)) {}
 
-auto Credentials::server() const -> std::string const& { return server_; }
+auto Credentials::serverUrl() const -> Url const& { return serverUrl_; }
 
 auto Credentials::userName() const -> std::string const& { return userName_; }
 

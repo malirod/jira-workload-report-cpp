@@ -114,10 +114,12 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
       boost::gregorian::to_iso_extended_string(appConfig_.options().dateEnd()));
 
   auto dnsLookupResultsOrError =
-      dnsLookup(*ioContext_, appConfig_.credentials().server(), "https", yield);
+      dnsLookup(*ioContext_, appConfig_.credentials().serverUrl().host(),
+                appConfig_.credentials().serverUrl().scheme(), yield);
   if (!dnsLookupResultsOrError) {
-    LOG_ERROR("Failed to make dns lookup for url {}. Error: {}",
-              appConfig_.credentials().server(),
+    LOG_ERROR("Failed to make dns lookup for url {}://{}. Error: {}",
+              appConfig_.credentials().serverUrl().scheme(),
+              appConfig_.credentials().serverUrl().host(),
               dnsLookupResultsOrError.error().message());
     return dnsLookupResultsOrError.error();
   }

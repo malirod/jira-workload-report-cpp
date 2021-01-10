@@ -11,7 +11,7 @@ TEST_CASE("Valid config", "[AppConfig]") {
   const auto *const config = R"(
     {
       "credentials": {
-        "server":"my.server.com",
+        "serverUrl":"https://my.server.com",
         "userName":"LOGIN",
         "password":"PASSWORD"
       },
@@ -26,7 +26,10 @@ TEST_CASE("Valid config", "[AppConfig]") {
   )";
   auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
   REQUIRE(appConfigOrError.has_value());
-  REQUIRE(appConfigOrError.value().credentials().server() == "my.server.com");
+  REQUIRE(appConfigOrError.value().credentials().serverUrl().scheme() ==
+          "https");
+  REQUIRE(appConfigOrError.value().credentials().serverUrl().host() ==
+          "my.server.com");
   REQUIRE(appConfigOrError.value().options().dateStart().year() == 2020);
   REQUIRE(appConfigOrError.value().options().dateStart().month() == 11);
   REQUIRE(appConfigOrError.value().options().dateStart().day() == 21);
@@ -41,7 +44,7 @@ TEST_CASE("Associations keys are normalized during load", "[AppConfig]") {
   const auto *const config = R"(
     {
       "credentials": {
-        "server":"my.server.com",
+        "serverUrl":"https://my.server.com",
         "userName":"LOGIN",
         "password":"PASSWORD"
       },
@@ -73,7 +76,7 @@ TEST_CASE("Associations keys are normalized during load", "[AppConfig]") {
 TEST_CASE("Invalid config. Bad Json.", "[AppConfig]") {
   const auto *const config = R"(
       "credentials": {
-        "server":"my.server.com",
+        "serverUrl":"https://my.server.com",
         "userName":"LOGIN",
         "password":"PASSWORD"
       },
@@ -116,7 +119,7 @@ TEST_CASE("Invalid config. Missing userName.", "[AppConfig]") {
   const auto *const config = R"(
     {
       "credentials": {
-        "server":"my.server.com",
+        "serverUrl":"https://my.server.com",
         "password":"PASSWORD"
       },
       "options": {
@@ -137,7 +140,7 @@ TEST_CASE("Invalid config. Missing password.", "[AppConfig]") {
   const auto *const config = R"(
     {
       "credentials": {
-        "server":"my.server.com",
+        "serverUrl":"https://my.server.com",
         "userName":"LOGIN"
       },
       "options": {
@@ -158,7 +161,7 @@ TEST_CASE("Invalid config. Missing dateStart.", "[AppConfig]") {
   const auto *const config = R"(
     {
       "credentials": {
-        "server":"my.server.com",
+        "serverUrl":"https://my.server.com",
         "userName":"LOGIN",
         "password":"PASSWORD"
       },
@@ -179,7 +182,7 @@ TEST_CASE("Invalid config. Missing dateEnd.", "[AppConfig]") {
   const auto *const config = R"(
     {
       "credentials": {
-        "server":"my.server.com",
+        "serverUrl":"https://my.server.com",
         "userName":"LOGIN",
         "password":"PASSWORD"
       },
@@ -200,7 +203,7 @@ TEST_CASE("Invalid config. Missing users.", "[AppConfig]") {
   const auto *const config = R"(
     {
       "credentials": {
-        "server":"my.server.com",
+        "serverUrl":"https://my.server.com",
         "userName":"LOGIN",
         "password":"PASSWORD"
       },
@@ -221,7 +224,7 @@ TEST_CASE("Invalid config. DateStart wrong format", "[AppConfig]") {
   const auto *const config = R"(
     {
       "credentials": {
-        "server":"my.server.com",
+        "serverUrl":"https://my.server.com",
         "userName":"LOGIN",
         "password":"PASSWORD"
       },
@@ -243,7 +246,7 @@ TEST_CASE("Invalid config. DateEnd wrong format", "[AppConfig]") {
   const auto *const config = R"(
     {
       "credentials": {
-        "server":"my.server.com",
+        "serverUrl":"https://my.server.com",
         "userName":"LOGIN",
         "password":"PASSWORD"
       },

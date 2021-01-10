@@ -28,8 +28,6 @@ void EngineLauncher::onEngineStopped() {
 }
 
 auto EngineLauncher::init() -> std::error_code {
-  LOG_INFO("Jira: {}", appConfig_.credentials().server());
-
   ioContext_ = std::make_shared<boost::asio::io_context>();
 
   signalHandler_ =
