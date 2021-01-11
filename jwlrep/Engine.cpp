@@ -107,7 +107,7 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
     return request;
   };
 
-  LOG_DEBUG(
+  LOG_INFO(
       "Query timesheets for all users for time period: {} - {}",
       boost::gregorian::to_iso_extended_string(
           appConfig_.options().dateStart()),
@@ -133,7 +133,7 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
   auto barrier = std::make_shared<boost::fibers::barrier>(
       appConfig_.options().users().size() + 1);
   for (auto const& user : appConfig_.options().users()) {
-    LOG_DEBUG("Start getting data for the user {}", user);
+    LOG_INFO("Requesting data for the user {}", user);
     boost::fibers::fiber([barrier, &makeHttpRequest, &dnsLookupResultsOrError,
                           &user, &yield, &timeSheets, this]() {
       auto const guard = ScopeGuard{[&]() {
@@ -165,22 +165,23 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
 
       timeSheets.emplace_back(std::move(userTimeSheetOrError.value()));
 
-      LOG_DEBUG("Got data for the user {}", user);
+      LOG_INFO("Got data for the user {}", user);
     }).detach();
   }
 
   barrier->wait();
-  LOG_DEBUG("All request have been finished.");
+  LOG_INFO("All request have been finished.");
   return timeSheets;
 }
 
 void Engine::generateTimesheetsXSLTReport(TimeSheets const& timeSheets) {
-  LOG_DEBUG("Generating report");
+  LOG_INFO("Generating report");
   if (timeSheets.empty()) {
     LOG_INFO("Timesheets are empty. Skip report generation.");
     return;
   }
   createReportExcel(timeSheets, appConfig_.options());
+  LOG_INFO("Report has been saved");
 }
 
 }  // namespace jwlrep
