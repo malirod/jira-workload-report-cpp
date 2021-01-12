@@ -19,6 +19,8 @@ Dependencies are:
 * [nlohmann](https://github.com/nlohmann/json)
 * [json-schema-validator](https://github.com/pboettch/json-schema-validator)
 * [catch2](https://github.com/catchorg/Catch2)
+* [magic-enum](https://github.com/Neargye/magic_enum)
+* [uriparser](https://github.com/uriparser/uriparser)
 
 ## VSCode configuration
 

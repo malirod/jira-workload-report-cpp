@@ -21,8 +21,6 @@ auto dnsLookup(boost::asio::io_context& ioContext, std::string_view const host,
     -> Expected<boost::asio::ip::tcp::resolver::results_type> {
   boost::beast::error_code errorCode;
   boost::asio::ip::tcp::resolver resolver(ioContext);
-  // TODO(malirod): pass address as URL and extract host & service from URL
-  // itself
   auto dnsLookupResults =
       resolver.async_resolve(host, service, yield[errorCode]);
   if (errorCode) {

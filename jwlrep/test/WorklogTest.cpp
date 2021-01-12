@@ -96,18 +96,21 @@ TEST_CASE("Worklog: Invalid user timesheet. Bad Json.", "[Worklog]") {
 TEST_CASE("Worklog: Invalid user timesheet. Missing key", "[Worklog]") {
   char const *const worklogJsonStr = R"(
   {
-  "worklog": [{
-      "summary": "Summary1",
-      "entries": [{
-              "id": 1992012,
-              "comment": "Some comment 1",
-              "timeSpent": 3600,
-              "author": "user1",
-              "created": 1604507259177
-
-          }
-      ],
-      "fields": []
+	"worklog": [
+		{
+            "summary": "Summary1",
+			"entries": [
+				{
+					"id": 1992012,
+					"comment": "Some comment 1",
+					"timeSpent": 3600,
+					"author": "user1",
+					"created": 1604507259177
+				}
+			],
+			"fields": []
+		}
+	]
   }
   )";
   auto const userTimeSheetOrError =
@@ -119,18 +122,21 @@ TEST_CASE("Worklog: Invalid user timesheet. Missing key", "[Worklog]") {
 TEST_CASE("Worklog: Invalid user timesheet. Missing summary", "[Worklog]") {
   char const *const worklogJsonStr = R"(
   {
-  "worklog": [{
-      "key": "Key1",
-      "entries": [{
-              "id": 1992012,
-              "comment": "Some comment 1",
-              "timeSpent": 3600,
-              "author": "user1",
-              "created": 1604507259177
-
-          }
-      ],
-      "fields": []
+	"worklog": [
+		{
+			"key": "Key1",
+			"entries": [
+				{
+					"id": 1992012,
+					"comment": "Some comment 1",
+					"timeSpent": 3600,
+					"author": "user1",
+					"created": 1604507259177
+				}
+			],
+			"fields": []
+		}
+	]
   }
   )";
   auto const userTimeSheetOrError =

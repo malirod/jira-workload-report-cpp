@@ -95,7 +95,9 @@ set(LIB_SRC_LIST
     "jwlrep/ExcelReport.cpp"
     "jwlrep/FiberUtil.h"
     "jwlrep/Url.cpp"
-    "jwlrep/Url.h")
+    "jwlrep/Url.h"
+    "jwlrep/JsonValidatorUtil.h"
+    "jwlrep/JsonValidatorUtil.cpp")
 
 add_library(${LIB_NAME} ${LIB_SRC_LIST})
 add_library(jwlrep::${LIB_NAME} ALIAS ${LIB_NAME})

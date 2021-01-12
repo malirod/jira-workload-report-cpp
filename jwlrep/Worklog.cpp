@@ -4,6 +4,7 @@
 
 #include <jwlrep/DateTimeUtil.h>
 #include <jwlrep/GeneralError.h>
+#include <jwlrep/JsonValidatorUtil.h>
 #include <jwlrep/Logger.h>
 #include <jwlrep/Worklog.h>
 
@@ -102,15 +103,12 @@ auto isJsonValid(nlohmann::json const& json) -> bool {
   }
   )"_json;
 
-  try {
-    static nlohmann::json_schema::json_validator const validator(
-        jsonSchema, nullptr,
-        nlohmann::json_schema::default_string_format_check);
-    // TODO(malirod): Extract error handler which will not use exceptions. Make
-    // util class.
-    validator.validate(json);
-  } catch (std::exception const& e) {
-    LOG_ERROR("Worklog validation has failed: {}", e.what());
+  static nlohmann::json_schema::json_validator const validator(
+      jsonSchema, nullptr, nlohmann::json_schema::default_string_format_check);
+  static jwlrep::JsonValidatorErrorHandler errorHandler;
+  validator.validate(json, errorHandler);
+  if (errorHandler) {
+    LOG_ERROR("Worklog validation has failed.");
     return false;
   }
   return true;
