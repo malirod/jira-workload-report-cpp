@@ -15,6 +15,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(CTest)
 
+# Set the githooks directory
+message("git config core.hooksPath .githooks")
+execute_process(COMMAND git config core.hooksPath .githooks
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
 if(WIN32)
   # Set global warnings configuration for all sub-projects
   if(MSVC)
