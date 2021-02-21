@@ -6,6 +6,7 @@
 
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/signal_set.hpp>
+#include <csignal>
 #include <functional>
 #include <vector>
 

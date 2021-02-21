@@ -8,8 +8,6 @@
 #include <jwlrep/ScopeGuard.h>
 #include <jwlrep/SignalHandler.h>
 
-#include <csignal>
-
 namespace jwlrep {
 
 EngineLauncher::EngineLauncher(AppConfig appConfig)
