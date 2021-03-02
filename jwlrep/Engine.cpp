@@ -2,62 +2,41 @@
 
 // Copyright (C) 2020 Malinovsky Rodion (rodionmalino@gmail.com)
 
+#include <fmt/ostream.h>
 #include <jwlrep/AppConfig.h>
-#include <jwlrep/Base64.h>
 #include <jwlrep/Engine.h>
 #include <jwlrep/ExcelReport.h>
-#include <jwlrep/IEngineEventHandler.h>
 #include <jwlrep/Logger.h>
 #include <jwlrep/NetUtil.h>
-#include <jwlrep/RootCertificates.h>
 #include <jwlrep/ScopeGuard.h>
 #include <jwlrep/Worklog.h>
 
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/post.hpp>
-#include <boost/beast.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/fiber/asio/round_robin.hpp>
-#include <boost/fiber/asio/yield.hpp>
+#include <boost/fiber/all.hpp>
 #include <cassert>
 #include <magic_enum.hpp>
 #include <utility>
 
+#include "boost/fiber/operations.hpp"
+
 namespace jwlrep {
 
-Engine::Engine(std::shared_ptr<boost::asio::io_context> ioContext,
-               IEngineEventHandler& engineEventHandler,
-               AppConfig const& appConfig)
-    : ioContext_(std::move(ioContext)),
-      engineEventHandler_(engineEventHandler),
-      appConfig_(appConfig) {
+Engine::Engine(AppConfig const& appConfig) : appConfig_(appConfig) {
   LOG_DEBUG("Engine has been created.");
-  assert(ioContext_);
-  boost::fibers::use_scheduling_algorithm<boost::fibers::asio::round_robin>(
-      ioContext_);
-
-  sslContext_ = std::make_unique<boost::asio::ssl::context>(
-      boost::asio::ssl::context::tlsv12_client);
-
-  loadRootCertificates(*sslContext_);
-
-  sslContext_->set_verify_mode(boost::asio::ssl::verify_peer);
 }
 
-void Engine::start() {
+void Engine::start(std::function<void()> completionHandler) {
   LOG_DEBUG("Starting engine");
 
-  boost::fibers::fiber([this]() {
+  boost::fibers::fiber([this, completionHandler]() {
     LOG_DEBUG("Launched main fiber");
-
-    auto const guard = ScopeGuard{[&]() {
-      LOG_DEBUG("Finished main fiber");
-      stop();
-    }};
+    LOG_DEBUG("Launched main fiber. Thread id: {}. Fiber id: {}",
+              std::this_thread::get_id(), boost::this_fiber::get_id());
 
     try {
-      boost::asio::post(*ioContext_,
-                        [this]() { engineEventHandler_.onEngineStarted(); });
+      auto const guard = ScopeGuard{[&completionHandler]() {
+        LOG_DEBUG("Finished main fiber");
+        completionHandler();
+      }};
 
       auto const timeSheetsOrError = loadTimesheets();
 
@@ -77,33 +56,17 @@ void Engine::start() {
   LOG_DEBUG("Engine has been launched.");
 }
 
-void Engine::stop() {
-  LOG_DEBUG("Stopping engine");
-
-  boost::asio::post(*ioContext_,
-                    [this]() { engineEventHandler_.onEngineStopped(); });
-}
-
 auto Engine::loadTimesheets() -> Expected<TimeSheets> {
-  namespace http = boost::beast::http;
-  auto& yield = boost::fibers::asio::this_yield();
-
   auto makeHttpRequest = [&options = appConfig_.options(),
-                          &credentials =
-                              appConfig_.credentials()](auto const& userName) {
-    auto const requestStr = fmt::format(
-        "/rest/timesheet-gadget/1.0/"
+                          &serverUrl = appConfig_.credentials().serverUrl()](
+                             auto const& userName) {
+    auto request = fmt::format(
+        "{}/rest/timesheet-gadget/1.0/"
         "raw-timesheet.json?targetUser={}&startDate={}&endDate={}",
-        userName, boost::gregorian::to_iso_extended_string(options.dateStart()),
+        serverUrl, userName,
+        boost::gregorian::to_iso_extended_string(options.dateStart()),
         boost::gregorian::to_iso_extended_string(options.dateEnd()));
-    auto const kHTTPVersion = 10;
-    http::request<http::empty_body> request{http::verb::get, requestStr,
-                                            kHTTPVersion};
 
-    request.set(
-        http::field::authorization,
-        "Basic " + base64Encode(fmt::format("{}:{}", credentials.userName(),
-                                            credentials.password())));
     return request;
   };
 
@@ -112,17 +75,6 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
       boost::gregorian::to_iso_extended_string(
           appConfig_.options().dateStart()),
       boost::gregorian::to_iso_extended_string(appConfig_.options().dateEnd()));
-
-  auto dnsLookupResultsOrError =
-      dnsLookup(*ioContext_, appConfig_.credentials().serverUrl().host(),
-                appConfig_.credentials().serverUrl().scheme(), yield);
-  if (!dnsLookupResultsOrError) {
-    LOG_ERROR("Failed to make dns lookup for url {}://{}. Error: {}",
-              appConfig_.credentials().serverUrl().scheme(),
-              appConfig_.credentials().serverUrl().host(),
-              dnsLookupResultsOrError.error().message());
-    return dnsLookupResultsOrError.error();
-  }
 
   TimeSheets timeSheets;
   timeSheets.reserve(appConfig_.options().users().size());
@@ -134,6 +86,33 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
       appConfig_.options().users().size() + 1);
   for (auto const& user : appConfig_.options().users()) {
     LOG_INFO("Requesting data for the user {}", user);
+    boost::fibers::fiber([barrier, &user, &makeHttpRequest,
+                          &credentials = appConfig_.credentials()]() {
+      auto const guard = ScopeGuard{[&]() {
+        LOG_DEBUG("Request fiber has finished");
+        barrier->wait();
+      }};
+      LOG_DEBUG("Fiber for user {}. Thread id: {}. Fiber id: {}", user,
+                std::this_thread::get_id(), boost::this_fiber::get_id());
+      auto const responseOrError =
+          httpGet(makeHttpRequest(user), credentials.userName(),
+                  credentials.password(), std::chrono::seconds(10));
+      if (!responseOrError) {
+        LOG_ERROR("Failed to get data for user {}. Error: {}", user,
+                  responseOrError.error().message());
+        return;
+      }
+      LOG_DEBUG("Response: {}", responseOrError.value());
+      auto userTimeSheetOrError =
+          createUserTimeSheetFromJson(responseOrError.value());
+      if (!userTimeSheetOrError) {
+        LOG_ERROR("Failed to parse timesheet for user {}. Error: {}", user,
+                  responseOrError.error().message());
+        return;
+      }
+      // !!!!! push result to queue
+    }).detach();
+    /*
     boost::fibers::fiber([barrier, &makeHttpRequest, &dnsLookupResultsOrError,
                           &user, &yield, &timeSheets, this]() {
       auto const guard = ScopeGuard{[&]() {
@@ -165,8 +144,9 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
 
       timeSheets.emplace_back(std::move(userTimeSheetOrError.value()));
 
-      LOG_INFO("Got data for the user {}", user);
-    }).detach();
+    LOG_INFO("Got data for the user {}", user);
+  }).detach();
+  */
   }
 
   barrier->wait();

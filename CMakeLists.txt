@@ -60,7 +60,7 @@ find_package(nlohmann_json_schema_validator REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(xlnt REQUIRED)
 find_package(magic_enum CONFIG REQUIRED)
-find_package(uriparser CONFIG REQUIRED)
+find_package(cpr CONFIG REQUIRED)
 
 configure_file(config/Version.h.in jwlrep/Version.h)
 
@@ -78,20 +78,12 @@ set(LIB_SRC_LIST
     "jwlrep/AppConfig.cpp"
     "jwlrep/PathUtil.h"
     "jwlrep/PathUtil.cpp"
-    "jwlrep/SignalHandler.h"
-    "jwlrep/SignalHandler.cpp"
-    "jwlrep/IEngineEventHandler.h"
     "jwlrep/ScopeGuard.h"
     "jwlrep/Outcome.h"
     "jwlrep/Logger.h"
     "jwlrep/Logger.cpp"
-    "jwlrep/Base64.h"
-    "jwlrep/Base64.cpp"
-    "jwlrep/RootCertificates.h"
     "jwlrep/NetUtil.h"
     "jwlrep/NetUtil.cpp"
-    "jwlrep/ErrorCodeUtil.h"
-    "jwlrep/ErrorCodeUtil.cpp"
     "jwlrep/Worklog.h"
     "jwlrep/Worklog.cpp"
     "jwlrep/DateTimeUtil.h"
@@ -99,8 +91,6 @@ set(LIB_SRC_LIST
     "jwlrep/ExcelReport.h"
     "jwlrep/ExcelReport.cpp"
     "jwlrep/FiberUtil.h"
-    "jwlrep/Url.cpp"
-    "jwlrep/Url.h"
     "jwlrep/JsonValidatorUtil.h"
     "jwlrep/JsonValidatorUtil.cpp")
 
@@ -118,9 +108,6 @@ target_include_directories(
 
 target_compile_features(${LIB_NAME} PRIVATE cxx_std_17)
 
-# boost fiber asio placed in the project root available
-target_include_directories(${LIB_NAME} PRIVATE "boost")
-
 # To be able to include Version.h
 target_include_directories(${LIB_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -131,15 +118,9 @@ target_link_libraries(
           Boost::fiber
           nlohmann_json::nlohmann_json
           nlohmann_json_schema_validator
-          OpenSSL::SSL
-          OpenSSL::Crypto
           xlnt::xlnt
           magic_enum::magic_enum
-          uriparser::uriparser)
-
-if(MSVC)
-  target_link_libraries(${LIB_NAME} INTERFACE Crypt32.lib)
-endif()
+          cpr)
 
 target_link_libraries(${LIB_NAME} PUBLIC spdlog::spdlog)
 
@@ -168,14 +149,9 @@ if(BUILD_TESTING)
   set(TEST_LIB_NAME "${LIB_NAME}_test")
 
   set(TEST_SRC_LIST
-      "jwlrep/test/AppConfigTest.cpp"
-      "jwlrep/test/EnumTest.cpp"
-      "jwlrep/test/GeneralErrorTest.cpp"
-      "jwlrep/test/Base64Test.cpp"
-      "jwlrep/test/ErrorCodeUtilTest.cpp"
-      "jwlrep/test/WorklogTest.cpp"
-      "jwlrep/test/ExcelReportTest.cpp"
-      "jwlrep/test/UrlTest.cpp")
+      "jwlrep/test/AppConfigTest.cpp" "jwlrep/test/EnumTest.cpp"
+      "jwlrep/test/GeneralErrorTest.cpp" "jwlrep/test/WorklogTest.cpp"
+      "jwlrep/test/ExcelReportTest.cpp")
 
   add_library(${TEST_LIB_NAME} OBJECT ${TEST_SRC_LIST})
   add_library(jwlrep::${TEST_LIB_NAME} ALIAS ${TEST_LIB_NAME})

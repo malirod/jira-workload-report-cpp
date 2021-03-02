@@ -11,14 +11,16 @@ namespace jwlrep {
 
 namespace detail {
 
+inline void waitAllImpl(std::shared_ptr<boost::fibers::barrier> /*unused*/) {}
+
 template <typename Fn, typename... Fns>
-void waitAllImpl(boost::fibers::barrier& barrier, Fn&& function,
+void waitAllImpl(std::shared_ptr<boost::fibers::barrier> barrier, Fn&& function,
                  Fns&&... functions) {
   boost::fibers::fiber(std::bind(
-                           [](boost::fibers::barrier& barrier,
+                           [](std::shared_ptr<boost::fibers::barrier>& barrier,
                               typename std::decay<Fn>::type& function) mutable {
                              function();
-                             barrier.wait();
+                             barrier->wait();
                            },
                            barrier, std::forward<Fn>(function)))
       .detach();
@@ -30,9 +32,9 @@ void waitAllImpl(boost::fibers::barrier& barrier, Fn&& function,
 template <typename... Fns>
 void waitAll(Fns&&... functions) {
   std::size_t const count(sizeof...(functions));
-  boost::fibers::barrier barrier{count + 1};
+  auto barrier = std::make_shared<boost::fibers::barrier>(count + 1);
   waitAllImpl(&barrier, std::forward<Fns>(functions)...);
-  barrier.wait();
+  barrier->wait();
 }
 
 template <typename T>

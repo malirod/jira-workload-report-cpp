@@ -5,8 +5,6 @@
     "description": "Gets worklog report from Jira and generates excel report with workload.",
     "dependencies": [
         "boost-algorithm",
-        "boost-asio",
-        "boost-beast",
         "boost-container",
         "boost-date-time",
         "boost-fiber",
@@ -19,6 +17,7 @@
         "xlnt",
         "catch2",
         "magic-enum",
-        "uriparser"
+        "uriparser",
+        "cpr"
     ]
 }

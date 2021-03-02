@@ -26,10 +26,8 @@ TEST_CASE("Valid config", "[AppConfig]") {
   )";
   auto const appConfigOrError = jwlrep::createAppConfigFromJson(config);
   REQUIRE(appConfigOrError.has_value());
-  REQUIRE(appConfigOrError.value().credentials().serverUrl().scheme() ==
-          "https");
-  REQUIRE(appConfigOrError.value().credentials().serverUrl().host() ==
-          "my.server.com");
+  REQUIRE(appConfigOrError.value().credentials().serverUrl() ==
+          "https://my.server.com");
   REQUIRE(appConfigOrError.value().options().dateStart().year() == 2020);
   REQUIRE(appConfigOrError.value().options().dateStart().month() == 11);
   REQUIRE(appConfigOrError.value().options().dateStart().day() == 21);

@@ -7,7 +7,6 @@
 #include <jwlrep/JsonValidatorUtil.h>
 #include <jwlrep/Logger.h>
 #include <jwlrep/PathUtil.h>
-#include <jwlrep/Url.h>
 #include <jwlrep/Version.h>
 
 #include <boost/algorithm/string.hpp>
@@ -23,12 +22,7 @@ namespace nlohmann {
 template <>
 struct adl_serializer<jwlrep::Credentials> {
   static auto from_json(json const& json) -> jwlrep::Credentials {
-    auto const& serverUrlStr = json["serverUrl"].get<std::string>();
-    auto serverUrlOrError = jwlrep::Url::create(serverUrlStr);
-    if (!serverUrlOrError) {
-      throw std::runtime_error(fmt::format("Bad Url: '{}'", serverUrlStr));
-    }
-    return jwlrep::Credentials{std::move(serverUrlOrError.value()),
+    return jwlrep::Credentials{json["serverUrl"].get<std::string>(),
                                json["userName"].get<std::string>(),
                                json["password"].get<std::string>()};
     ;
@@ -212,13 +206,13 @@ auto processCmdArgs(int argc, char** argv) -> Expected<AppConfig> {
   }
 }
 
-Credentials::Credentials(Url serverUrl, std::string userName,
+Credentials::Credentials(std::string serverUrl, std::string userName,
                          std::string password)
     : serverUrl_(std::move(serverUrl)),
       userName_(std::move(userName)),
       password_(std::move(password)) {}
 
-auto Credentials::serverUrl() const -> Url const& { return serverUrl_; }
+auto Credentials::serverUrl() const -> std::string const& { return serverUrl_; }
 
 auto Credentials::userName() const -> std::string const& { return userName_; }
 
