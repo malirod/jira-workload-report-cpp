@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: MIT
 
-// Copyright (C) 2020 Malinovsky Rodion (rodionmalino@gmail.com)
+// Copyright (C) 2021 Malinovsky Rodion (rodionmalino@gmail.com)
 
 #include <jwlrep/AppConfig.h>
 #include <jwlrep/Base64.h>
 #include <jwlrep/Engine.h>
 #include <jwlrep/ExcelReport.h>
-#include <jwlrep/IEngineEventHandler.h>
 #include <jwlrep/Logger.h>
 #include <jwlrep/NetUtil.h>
 #include <jwlrep/RootCertificates.h>
@@ -17,76 +16,62 @@
 #include <boost/asio/post.hpp>
 #include <boost/beast.hpp>
 #include <boost/beast/http.hpp>
-#include <boost/fiber/asio/round_robin.hpp>
-#include <boost/fiber/asio/yield.hpp>
 #include <cassert>
 #include <magic_enum.hpp>
 #include <utility>
 
 namespace jwlrep {
 
-Engine::Engine(std::shared_ptr<boost::asio::io_context> ioContext,
-               IEngineEventHandler& engineEventHandler,
+Engine::Engine(boost::asio::any_io_executor ioExecutor,
                AppConfig const& appConfig)
-    : ioContext_(std::move(ioContext)),
-      engineEventHandler_(engineEventHandler),
+    : ioExecutor_(std::move(ioExecutor)),
+      sslContext_(boost::asio::ssl::context::tlsv12_client),
       appConfig_(appConfig) {
   LOG_DEBUG("Engine has been created.");
-  assert(ioContext_);
-  boost::fibers::use_scheduling_algorithm<boost::fibers::asio::round_robin>(
-      ioContext_);
 
-  sslContext_ = std::make_unique<boost::asio::ssl::context>(
-      boost::asio::ssl::context::tlsv12_client);
+  loadRootCertificates(sslContext_);
 
-  loadRootCertificates(*sslContext_);
-
-  sslContext_->set_verify_mode(boost::asio::ssl::verify_peer);
+  sslContext_.set_verify_mode(boost::asio::ssl::verify_peer);
 }
 
-void Engine::start() {
+void Engine::startAsync(CompletionHandler onDone) {
   LOG_DEBUG("Starting engine");
 
-  boost::fibers::fiber([this]() {
-    LOG_DEBUG("Launched main fiber");
+  auto doStartAsync =
+      [this, onDone = std::move(onDone)](boost::asio::yield_context yield) {
+        LOG_DEBUG("Executing main task");
 
-    auto const guard = ScopeGuard{[&]() {
-      LOG_DEBUG("Finished main fiber");
-      stop();
-    }};
+        auto const guard = ScopeGuard{[&onDone]() {
+          LOG_DEBUG("Main task completed.");
+          onDone();
+        }};
 
-    try {
-      boost::asio::post(*ioContext_,
-                        [this]() { engineEventHandler_.onEngineStarted(); });
+        try {
+          auto const timeSheetsOrError = loadTimesheets(yield);
 
-      auto const timeSheetsOrError = loadTimesheets();
+          if (!timeSheetsOrError) {
+            LOG_ERROR("Failed to load timesheets: {}",
+                      timeSheetsOrError.error().message());
+            return;
+          }
 
-      if (!timeSheetsOrError) {
-        LOG_ERROR("Failed to load timesheets: {}",
-                  timeSheetsOrError.error().message());
-        return;
-      }
+          generateTimesheetsXSLTReport(timeSheetsOrError.value());
 
-      generateTimesheetsXSLTReport(timeSheetsOrError.value());
+        } catch (std::exception const& e) {
+          LOG_ERROR("Got exception in main fiber: {}", e.what());
+        }
+      };
 
-    } catch (std::exception const& e) {
-      LOG_ERROR("Got exception in main fiber: {}", e.what());
-    }
-  }).detach();
+  LOG_DEBUG("Posting main task");
+  // boost::asio::post(ioExecutor_, std::move(doStartAsync));
+  boost::asio::spawn(ioExecutor_, std::move(doStartAsync));
 
   LOG_DEBUG("Engine has been launched.");
 }
 
-void Engine::stop() {
-  LOG_DEBUG("Stopping engine");
-
-  boost::asio::post(*ioContext_,
-                    [this]() { engineEventHandler_.onEngineStopped(); });
-}
-
-auto Engine::loadTimesheets() -> Expected<TimeSheets> {
+auto Engine::loadTimesheets(boost::asio::yield_context& yield)
+    -> Expected<TimeSheets> {
   namespace http = boost::beast::http;
-  auto& yield = boost::fibers::asio::this_yield();
 
   auto makeHttpRequest = [&options = appConfig_.options(),
                           &credentials =
@@ -114,7 +99,7 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
       boost::gregorian::to_iso_extended_string(appConfig_.options().dateEnd()));
 
   auto dnsLookupResultsOrError =
-      dnsLookup(*ioContext_, appConfig_.credentials().serverUrl().host(),
+      dnsLookup(ioExecutor_, appConfig_.credentials().serverUrl().host(),
                 appConfig_.credentials().serverUrl().scheme(), yield);
   if (!dnsLookupResultsOrError) {
     LOG_ERROR("Failed to make dns lookup for url {}://{}. Error: {}",
@@ -127,23 +112,18 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
   TimeSheets timeSheets;
   timeSheets.reserve(appConfig_.options().users().size());
 
-  // It has to be shared ptr otherwise there will be the crash. Due to
-  // cooperative mode outer function will exit (and barrier will be destroyed)
-  // before last sub-fiber will exit
-  auto barrier = std::make_shared<boost::fibers::barrier>(
-      appConfig_.options().users().size() + 1);
   for (auto const& user : appConfig_.options().users()) {
     LOG_INFO("Requesting data for the user {}", user);
-    boost::fibers::fiber([barrier, &makeHttpRequest, &dnsLookupResultsOrError,
-                          &user, &yield, &timeSheets, this]() {
-      auto const guard = ScopeGuard{[&]() {
-        LOG_DEBUG("Request fiber has finished");
-        barrier->wait();
-      }};
+    boost::asio::spawn([&makeHttpRequest, &dnsLookupResultsOrError, &user,
+                        &timeSheets, this](boost::asio::yield_context yield) {
+      // auto const guard = ScopeGuard{[&]() {
+      //  LOG_DEBUG("Request fiber has finished");
+      //  barrier->wait();
+      //}};
       auto request = makeHttpRequest(user);
 
       auto const responseOrError =
-          httpGet(*ioContext_, *sslContext_, dnsLookupResultsOrError.value(),
+          httpGet(ioExecutor_, sslContext_, dnsLookupResultsOrError.value(),
                   request, std::chrono::seconds(10), yield);
       if (!responseOrError) {
         LOG_ERROR("Failed to get data for user {}. Error: {}", user,
@@ -163,13 +143,12 @@ auto Engine::loadTimesheets() -> Expected<TimeSheets> {
         return;
       }
 
-      timeSheets.emplace_back(std::move(userTimeSheetOrError.value()));
+      // timeSheets.emplace_back(std::move(userTimeSheetOrError.value()));
 
       LOG_INFO("Got data for the user {}", user);
-    }).detach();
+    });
   }
 
-  barrier->wait();
   LOG_INFO("All request have been finished.");
   return timeSheets;
 }

@@ -9,7 +9,7 @@
         "boost-beast",
         "boost-container",
         "boost-date-time",
-        "boost-fiber",
+        "boost-coroutine",
         "boost-outcome",
         "boost-program-options",
         "spdlog",

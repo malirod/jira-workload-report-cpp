@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-// Copyright (C) 2020 Malinovsky Rodion (rodionmalino@gmail.com)
+// Copyright (C) 2021 Malinovsky Rodion (rodionmalino@gmail.com)
 
 #include <jwlrep/ErrorCodeUtil.h>
 #include <jwlrep/Logger.h>
@@ -10,17 +10,16 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/beast.hpp>
 #include <boost/beast/http.hpp>
-#include <boost/fiber/asio/yield.hpp>
 #include <system_error>
 
 namespace jwlrep {
 
-auto dnsLookup(boost::asio::io_context& ioContext, std::string_view const host,
-               std::string_view const service,
-               boost::fibers::asio::yield_t& yield)
+auto dnsLookup(boost::asio::any_io_executor& ioExecutor,
+               std::string_view const host, std::string_view const service,
+               boost::asio::yield_context& yield)
     -> Expected<boost::asio::ip::tcp::resolver::results_type> {
   boost::beast::error_code errorCode;
-  boost::asio::ip::tcp::resolver resolver(ioContext);
+  boost::asio::ip::tcp::resolver resolver{ioExecutor};
   auto dnsLookupResults =
       resolver.async_resolve(host, service, yield[errorCode]);
   if (errorCode) {
@@ -32,10 +31,11 @@ auto dnsLookup(boost::asio::io_context& ioContext, std::string_view const host,
 }
 
 auto httpGet(
-    boost::asio::io_context& ioContext, boost::asio::ssl::context& sslContext,
+    boost::asio::any_io_executor& ioExecutor,
+    boost::asio::ssl::context& sslContext,
     boost::asio::ip::tcp::resolver::results_type const& address,
     boost::beast::http::request<boost::beast::http::empty_body> const& request,
-    std::chrono::nanoseconds const timeout, boost::fibers::asio::yield_t& yield)
+    std::chrono::nanoseconds const timeout, boost::asio::yield_context& yield)
     -> Expected<boost::beast::http::response<boost::beast::http::string_body>> {
   namespace http = boost::beast::http;
   namespace beast = boost::beast;
@@ -43,7 +43,7 @@ auto httpGet(
   namespace ssl = boost::asio::ssl;
 
   beast::error_code errorCode;
-  beast::ssl_stream<beast::tcp_stream> stream(ioContext, sslContext);
+  beast::ssl_stream<beast::tcp_stream> stream(ioExecutor, sslContext);
 
   beast::get_lowest_layer(stream).expires_after(timeout);
 

@@ -1,51 +1,41 @@
 // SPDX-License-Identifier: MIT
 
-// Copyright (C) 2020 Malinovsky Rodion (rodionmalino@gmail.com)
+// Copyright (C) 2021 Malinovsky Rodion (rodionmalino@gmail.com)
 
 #pragma once
 
 #include <jwlrep/AppConfig.h>
-#include <jwlrep/IEngineEventHandler.h>
 #include <jwlrep/Worklog.h>
 
-#include <boost/asio/io_context.hpp>
+#include <boost/asio/spawn.hpp>
 #include <boost/beast/ssl.hpp>
+
+#include "boost/asio/any_io_executor.hpp"
 
 namespace jwlrep {
 
-/**
- * Implementation of Engine. Runs all business logic.
- */
 class Engine final {
  public:
-  explicit Engine(std::shared_ptr<boost::asio::io_context> ioContext,
-                  IEngineEventHandler& engineEventHandler,
+  explicit Engine(boost::asio::any_io_executor ioExecutor,
                   AppConfig const& appConfig);
 
   auto operator=(Engine const&) -> Engine& = delete;
   Engine(Engine const&) = delete;
 
-  /**
-   * Start Engine. Non-blocking call. Actual startup will be performed
-   * asynchronously.
-   */
-  void start();
+  using CompletionHandler = std::function<void()>;
+  using OnStoppedEventHandler = std::function<void()>;
 
-  /**
-   * Trigger stop sequence. Non-blocking.
-   */
-  void stop();
+  void startAsync(CompletionHandler onDone);
 
  private:
-  auto loadTimesheets() -> Expected<TimeSheets>;
+  auto loadTimesheets(boost::asio::yield_context& yield)
+      -> Expected<TimeSheets>;
 
   void generateTimesheetsXSLTReport(TimeSheets const& timeSheets);
 
-  std::shared_ptr<boost::asio::io_context> ioContext_;
+  boost::asio::any_io_executor ioExecutor_;
 
-  std::unique_ptr<boost::asio::ssl::context> sslContext_;
-
-  IEngineEventHandler& engineEventHandler_;
+  boost::asio::ssl::context sslContext_;
 
   AppConfig const& appConfig_;
 };

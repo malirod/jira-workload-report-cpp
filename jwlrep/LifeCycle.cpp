@@ -1,23 +1,53 @@
 // SPDX-License-Identifier: MIT
 
-// Copyright (C) 2020 Malinovsky Rodion (rodionmalino@gmail.com)
+// Copyright (C) 2021 Malinovsky Rodion (rodionmalino@gmail.com)
 
 #include <jwlrep/AppConfig.h>
-#include <jwlrep/EngineLauncher.h>
+#include <jwlrep/Engine.h>
 #include <jwlrep/GeneralError.h>
 #include <jwlrep/Logger.h>
 #include <jwlrep/PathUtil.h>
+#include <jwlrep/ScopeGuard.h>
 #include <jwlrep/Version.h>
 
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/thread_pool.hpp>
 #include <cassert>
 #include <fstream>
 
-/**
- * Main entry point of the application.
- * @param argc Count of command line arguments.
- * @param argv Command line arguments.
- * @return Error code.
- */
+namespace jwlrep {
+
+auto run(AppConfig const& appConfig) -> std::error_code {
+  // Use defaut threads count: std::thread::hardware_concurrency() * 2
+  boost::asio::thread_pool threadPool;
+
+  auto handleStopRequest = [&threadPool]() {
+    LOG_DEBUG("Stopping thread pool");
+    threadPool.stop();
+  };
+
+  auto handleTerminationRequest = [&handleStopRequest]() {
+    LOG_INFO("Termination request received. Stopping.");
+    handleStopRequest();
+  };
+
+  boost::asio::signal_set signals{threadPool, SIGINT, SIGTERM};
+  signals.async_wait(
+      [&handleTerminationRequest](auto const& /*unused*/, auto /*unused*/) {
+        handleTerminationRequest();
+      });
+
+  Engine engine{threadPool.get_executor(), appConfig};
+  engine.startAsync([&handleStopRequest]() { handleStopRequest(); });
+
+  LOG_INFO("Waiting for termination request");
+  threadPool.join();
+
+  return GeneralError::Success;
+}
+
+}  // namespace jwlrep
+
 auto main(int argc, char** argv) -> int {
   auto errorCode = make_error_code(jwlrep::GeneralError::Success);
   try {
@@ -41,10 +71,7 @@ auto main(int argc, char** argv) -> int {
                 appConfigOrError.error().message());
       return appConfigOrError.error().value();
     }
-    auto appConfig = appConfigOrError.value();
-    jwlrep::EngineLauncher engineLauncher(std::move(appConfig));
-
-    errorCode = engineLauncher.run();
+    errorCode = run(appConfigOrError.value());
   } catch (std::exception const& error) {
     LOG_ERROR("Exception has occurred: {}", error.what());
     errorCode = make_error_code(jwlrep::GeneralError::InternalError);

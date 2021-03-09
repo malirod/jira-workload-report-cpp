@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 
-# Copyright (C) 2020 Malinovsky Rodion (rodionmalino@gmail.com)
+# Copyright (C) 2021 Malinovsky Rodion (rodionmalino@gmail.com)
 
 cmake_minimum_required(VERSION 3.18)
 
@@ -9,14 +9,14 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake")
 project(
   jwlrep
   LANGUAGES CXX
-  VERSION "1.0.0")
+  VERSION "2.0.0")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(CTest)
 
 # Set the githooks directory
-message("git config core.hooksPath .githooks")
+message(STATUS "git config core.hooksPath .githooks")
 execute_process(COMMAND git config core.hooksPath .githooks
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -52,7 +52,7 @@ if(WIN32)
 endif()
 
 # Dependencies
-find_package(Boost REQUIRED program_options fiber)
+find_package(Boost REQUIRED program_options coroutine)
 find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -72,15 +72,10 @@ set(LIB_SRC_LIST
     "jwlrep/GeneralError.cpp"
     "jwlrep/Engine.h"
     "jwlrep/Engine.cpp"
-    "jwlrep/EngineLauncher.h"
-    "jwlrep/EngineLauncher.cpp"
     "jwlrep/AppConfig.h"
     "jwlrep/AppConfig.cpp"
     "jwlrep/PathUtil.h"
     "jwlrep/PathUtil.cpp"
-    "jwlrep/SignalHandler.h"
-    "jwlrep/SignalHandler.cpp"
-    "jwlrep/IEngineEventHandler.h"
     "jwlrep/ScopeGuard.h"
     "jwlrep/Outcome.h"
     "jwlrep/Logger.h"
@@ -128,7 +123,7 @@ target_link_libraries(
   ${LIB_NAME}
   PRIVATE fmt::fmt
           Boost::program_options
-          Boost::fiber
+          Boost::coroutine
           nlohmann_json::nlohmann_json
           nlohmann_json_schema_validator
           OpenSSL::SSL
